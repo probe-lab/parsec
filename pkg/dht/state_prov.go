@@ -4,9 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ipfs/go-cid"
-
 	"github.com/dennis-tra/parsec/pkg/wrap"
+	"github.com/ipfs/go-cid"
 	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	log "github.com/sirupsen/logrus"
 )

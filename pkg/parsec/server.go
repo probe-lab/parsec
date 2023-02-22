@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/libp2p/go-libp2p/core/peer"
+
+	"github.com/multiformats/go-multiaddr"
+
+	"github.com/dennis-tra/parsec/pkg/util"
 
 	"github.com/dennis-tra/parsec/pkg/dht"
 	"github.com/julienschmidt/httprouter"
+	"golang.org/x/sync/errgroup"
 )
 
 import (
@@ -15,7 +20,6 @@ import (
 	"errors"
 	"net"
 
-	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -37,7 +41,29 @@ func NewServer(h string, p int) (*Server, error) {
 		return nil, fmt.Errorf("new host: %w", err)
 	}
 
-	for _, bp := range kaddht.GetDefaultBootstrapPeerAddrInfos() {
+	log.Infoln("Bootstrapping DHT...")
+
+	bps := []peer.AddrInfo{}
+	for _, s := range []string{
+		//"/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+		//"/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
+		//"/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+		//"/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+		"/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ", // mars.i.ipfs.io
+	} {
+		ma, err := multiaddr.NewMultiaddr(s)
+		if err != nil {
+			panic(err)
+		}
+		pi, err := peer.AddrInfoFromP2pAddr(ma)
+		if err != nil {
+			panic(err)
+		}
+		bps = append(bps, *pi)
+	}
+
+	for _, bp := range bps { // kaddht.GetDefaultBootstrapPeerAddrInfos() {
+		log.WithField("peerID", util.FmtPeerID(bp.ID)).Infoln("Connecting to bootstrap peer...")
 		if err = parsecHost.Connect(ctx, bp); err != nil {
 			log.WithError(err).Warnln("Could not connect to bootstrap peer")
 		}
@@ -110,7 +136,7 @@ func (s *Server) ListenAndServe() error {
 func (s *Server) logHandler(h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{
-			"url":    r.URL,
+			"url":    r.URL.String(),
 			"method": r.Method,
 		}).Infoln("Received Request")
 

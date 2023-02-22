@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
+	"github.com/julienschmidt/httprouter"
 	"github.com/libp2p/go-libp2p/core/peer"
 
 	"github.com/dennis-tra/parsec/pkg/dht"
 	"github.com/dennis-tra/parsec/pkg/util"
-	"github.com/julienschmidt/httprouter"
 )
 
 import (

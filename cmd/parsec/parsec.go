@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
@@ -134,10 +135,11 @@ func main() {
 		cancel()
 	}()
 
-	if err := app.RunContext(ctx, os.Args); err != nil {
+	if err := app.RunContext(ctx, os.Args); err != nil && !errors.Is(err, context.Canceled) {
 		log.Errorf("error: %v\n", err)
 		os.Exit(1)
 	}
+	log.Infoln("Parsec stopped.")
 }
 
 // Before is executed before any subcommands are run, but after the context is ready

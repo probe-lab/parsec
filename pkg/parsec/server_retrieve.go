@@ -7,15 +7,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
+	"github.com/ipfs/go-cid"
+	"github.com/julienschmidt/httprouter"
 	"github.com/libp2p/go-libp2p/core/peer"
-
-	"github.com/dennis-tra/parsec/pkg/dht"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ipfs/go-cid"
-
-	"github.com/julienschmidt/httprouter"
+	"github.com/dennis-tra/parsec/pkg/dht"
 )
 
 type RetrieveRequest struct {
@@ -23,6 +20,7 @@ type RetrieveRequest struct {
 }
 
 func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	ctx := r.Context()
 	var rr RetrieveRequest
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -42,14 +40,14 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	}
 
 	state := dht.NewRetrievalState(s.host, c)
-	ctx := state.Register(r.Context())
-	log.WithField("cid", c).Infoln("Start finding providers")
+	ctx = state.Register(ctx)
+	log.WithField("cid", c.String()).Infoln("Start finding providers")
 	state.Start = time.Now()
 	for provider := range s.host.DHT.FindProvidersAsync(ctx, c, rr.Count) {
-		log.WithField("cid", c).WithField("providerID", provider.ID).Infoln("Found Provider")
+		log.WithField("cid", c.String()).WithField("providerID", provider.ID).Infoln("Found Provider")
 	}
 	state.End = time.Now()
-	log.WithField("cid", c).Infoln("Start finding providers")
+	log.WithField("cid", c.String()).Infoln("Done finding providers")
 
 	state.Unregister()
 

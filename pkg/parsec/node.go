@@ -20,27 +20,41 @@ import (
 type Node struct {
 	*basic.Node
 
+	id     string
 	ctx    context.Context
 	client http.Client
 	host   string
 	port   int
-	logger *log.Logger
 	fmt    log.Formatter
+	done   chan struct{}
 }
 
 func NewNode(n *basic.Node, id string, host string, port int) (*Node, error) {
-	log.Infoln("Reading parsec binary...")
-	parsecBinary, err := os.ReadFile("parsec")
+	logEntry := log.WithField("nodeID", id)
+	logEntry.Infoln("Reading parsec binary...")
+
+	parsecBinPath := ""
+	if util.FileExists("parsec") {
+		parsecBinPath = "parsec"
+	} else {
+		execFile, err := os.Executable()
+		if err != nil {
+			return nil, fmt.Errorf("find path to executable: %w", err)
+		}
+		parsecBinPath = execFile
+	}
+
+	parsecBinary, err := os.ReadFile(parsecBinPath)
 	if err != nil {
 		return nil, fmt.Errorf("read parsec binary: %w", err)
 	}
 
-	log.Infoln("Sending parsec binary...")
+	logEntry.Infoln("Sending parsec binary...")
 	if err = n.SendFile("/parsec", bytes.NewReader(parsecBinary)); err != nil {
 		return nil, fmt.Errorf("send parsec binary: %w", err)
 	}
 
-	log.Infoln("Setting parsec permissions...")
+	logEntry.Infoln("Setting parsec permissions...")
 	proc, err := n.StartProc(cluster.StartProcRequest{
 		Command: "chmod",
 		Args:    []string{"+x", "/parsec"},
@@ -59,45 +73,73 @@ func NewNode(n *basic.Node, id string, host string, port int) (*Node, error) {
 	logger := log.New()
 	parsecNode := &Node{
 		Node:   n,
-		ctx:    context.Background(),
+		id:     id,
 		client: httpClient,
 		host:   host,
 		port:   port,
-		logger: logger,
 		fmt:    logger.Formatter,
+		done:   make(chan struct{}),
 	}
 
-	parsecNode.logger.Formatter = parsecNode
-	logEntry := parsecNode.logger.WithField("nodeID", id)
+	logger.Formatter = parsecNode
+	nodeLogger := logger.WithField("nodeID", id)
 
-	log.Infoln("Starting parsec server...")
+	logEntry.Infoln("Starting parsec server...")
 	proc, err = n.StartProc(cluster.StartProcRequest{
 		Command: "/parsec",
 		Args:    []string{"server"},
-		Stderr:  logEntry.WithField("fd", "stderr").Writer(),
-		Stdout:  logEntry.WithField("fd", "stdout").Writer(),
+		Stderr:  nodeLogger.Writer(),
+		Stdout:  nodeLogger.Writer(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("start parsec server: %w", err)
 	}
 
 	go func() {
-		procRes, err := proc.Wait()
-		log.WithError(err).WithField("exitCode", procRes.ExitCode).WithField("uptime", procRes.TimeMS).Infoln("Parsec server exited")
+		logEntry.Infoln("Waiting parsec server...")
+		procRes, err := proc.Context(n.Ctx).Wait()
+		if procRes != nil {
+			logEntry = logEntry.WithField("exitCode", procRes.ExitCode).WithField("uptime", procRes.TimeMS)
+		}
+		if err != nil {
+			logEntry = logEntry.WithError(err)
+		}
+		logEntry.Infoln("Parsec server exited")
+		close(parsecNode.done)
 	}()
 
 	return parsecNode, nil
 }
 
-func (n *Node) Context(ctx context.Context) *Node {
-	newN := *n
-	newN.Ctx = ctx
-	newN.Node = newN.Node.Context(ctx)
-	return &newN
+func (n *Node) WaitForAPI(ctx context.Context) error {
+	t := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-t.C:
+			log.WithField("node", n.id).Infoln("Check API availability...")
+			_, err := n.Info(ctx)
+			if err == nil {
+				return nil
+			}
+			t.Reset(time.Second)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
-func (n *Node) Info(c *util.Content) (*InfoResponse, error) {
-	res, err := n.client.Get(fmt.Sprintf("http://%s:%d/info", n.host, n.port))
+func (n *Node) ID() string {
+	return n.id
+}
+
+func (n *Node) Info(ctx context.Context) (*InfoResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s:%d/info", n.host, n.port), nil)
+	if err != nil {
+		return nil, fmt.Errorf("create info request: %w", err)
+	}
+	req = req.WithContext(ctx)
+
+	res, err := n.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("get info: %w", err)
 	}
@@ -115,7 +157,7 @@ func (n *Node) Info(c *util.Content) (*InfoResponse, error) {
 	return &info, nil
 }
 
-func (n *Node) Retrieve(c cid.Cid, count int) (*RetrievalResponse, error) {
+func (n *Node) Retrieve(ctx context.Context, c cid.Cid, count int) (*RetrievalResponse, error) {
 	rr := &RetrieveRequest{
 		Count: 1,
 	}
@@ -125,14 +167,24 @@ func (n *Node) Retrieve(c cid.Cid, count int) (*RetrievalResponse, error) {
 		return nil, fmt.Errorf("marshal retrieval request: %w", err)
 	}
 
-	res, err := n.client.Post(fmt.Sprintf("http://%s:%d/retrieve/%s", n.host, n.port, c.String()), "application/json", bytes.NewReader(data))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s:%d/retrieve/%s", n.host, n.port, c.String()), bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("create retrieve request: %w", err)
+	}
+	req = req.WithContext(ctx)
+
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := n.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("post retrieval request: %w", err)
 	}
+
 	dat, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read retrieval response: %w", err)
 	}
+
 	retrieval := RetrievalResponse{}
 	if err = json.Unmarshal(dat, &retrieval); err != nil {
 		return nil, fmt.Errorf("unmarshal retrieval response: %w", err)
@@ -141,7 +193,7 @@ func (n *Node) Retrieve(c cid.Cid, count int) (*RetrievalResponse, error) {
 	return &retrieval, nil
 }
 
-func (n *Node) Provide(c *util.Content) (*ProvideResponse, error) {
+func (n *Node) Provide(ctx context.Context, c *util.Content) (*ProvideResponse, error) {
 	pr := &ProvideRequest{
 		Content: c.Raw,
 	}
@@ -151,7 +203,15 @@ func (n *Node) Provide(c *util.Content) (*ProvideResponse, error) {
 		return nil, fmt.Errorf("marshal provide request: %w", err)
 	}
 
-	res, err := n.client.Post(fmt.Sprintf("http://%s:%d/provide", n.host, n.port), "application/json", bytes.NewReader(data))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s:%d/provide", n.host, n.port), bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("create retrieve request: %w", err)
+	}
+	req = req.WithContext(ctx)
+
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := n.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("start provide: %w", err)
 	}
@@ -172,7 +232,6 @@ func (n *Node) Provide(c *util.Content) (*ProvideResponse, error) {
 func (n *Node) Format(entry *log.Entry) ([]byte, error) {
 	logMsg := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(entry.Message), &logMsg); err != nil {
-		n.logger.WithError(err).Warnln("Could not unmarshal log message")
 		return n.fmt.Format(entry)
 	}
 
@@ -193,11 +252,14 @@ func (n *Node) Format(entry *log.Entry) ([]byte, error) {
 			}
 			entry.Level = l
 		default:
+			if k == "error" && v.(string) == "<nil>" {
+				continue
+			}
 			entry.Data[k] = v
 		}
 	}
 
-	if !n.logger.IsLevelEnabled(entry.Level) {
+	if !log.IsLevelEnabled(entry.Level) {
 		return nil, nil
 	}
 

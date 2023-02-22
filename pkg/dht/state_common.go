@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-cid"
-
 	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/qpeerset"
 	"github.com/libp2p/go-libp2p/core/network"

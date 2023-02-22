@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"sync"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/guseggert/clustertest/cluster/basic"
 	"github.com/guseggert/clustertest/cluster/docker"
@@ -45,34 +47,61 @@ func ScheduleAction(c *cli.Context) error {
 		return fmt.Errorf("new docker cluster: %w", err)
 	}
 
-	pc := parsec.NewCluster(basic.New(cl))
+	pc := parsec.NewCluster(basic.New(cl).Context(c.Context))
 
 	log.Infoln("Initializing nodes")
-	nodes, err := pc.NewNodes(2)
+	nodes, err := pc.NewNodes(5)
 	if err != nil {
 		return fmt.Errorf("new nodes: %w", err)
 	}
 
-	log.Infoln("sleeping...")
-	time.Sleep(5 * time.Second)
-
-	content, err := util.NewRandomContent()
-	if err != nil {
-		return fmt.Errorf("new random content: %w", err)
+	errg := errgroup.Group{}
+	for _, n := range nodes {
+		n2 := n
+		errg.Go(func() error {
+			return n2.WaitForAPI(c.Context)
+		})
 	}
-	provide, err := nodes[0].Provide(content)
-	if err != nil {
-		return err
+	if err = errg.Wait(); err != nil {
+		return fmt.Errorf("errgroup: %w", err)
 	}
-	log.Infoln(provide)
 
-	retrieval, err := nodes[1].Retrieve(content.CID, 1)
-	if err != nil {
-		return err
+	i := 0
+	for {
+		select {
+		case <-c.Context.Done():
+			return c.Err()
+		default:
+		}
+
+		content, err := util.NewRandomContent()
+		if err != nil {
+			return fmt.Errorf("new random content: %w", err)
+		}
+
+		_, err = nodes[i].Provide(c.Context, content)
+		if err != nil {
+			return err
+		}
+
+		var wg sync.WaitGroup
+		for j := 0; j < len(nodes); j++ {
+			wg.Add(1)
+			nidx := (i + j + 1) % len(nodes)
+
+			go func() {
+				defer wg.Done()
+				retrieval, err := nodes[nidx].Retrieve(c.Context, content.CID, 1)
+				if err != nil {
+					log.WithError(err).Infoln("asdfsdf")
+				} else {
+					log.WithField("nodeID", nodes[nidx].ID()).WithField("dur", retrieval.TimeToFirstProviderRecord()).Infoln("Time to first provider record")
+				}
+			}()
+		}
+		wg.Wait()
+
+		i += 1
+		i %= len(nodes)
 	}
-	log.Infoln("TimeToFirstProviderRecord", retrieval.TimeToFirstProviderRecord())
-
-	<-c.Context.Done()
-
-	return nil
 }

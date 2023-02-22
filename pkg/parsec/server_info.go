@@ -1,8 +1,8 @@
 package parsec
 
 import (
+	"encoding/json"
 	"net/http"
-	"runtime/debug"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -10,10 +10,14 @@ import (
 type InfoResponse struct{}
 
 func (s *Server) info(rw http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	bi, ok := debug.ReadBuildInfo()
-	if !ok {
+	resp := InfoResponse{}
+	data, err := json.Marshal(resp)
+	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	_ = bi
+	if _, err = rw.Write(data); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }

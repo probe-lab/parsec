@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/dennis-tra/parsec/pkg/util"
-	"github.com/dennis-tra/parsec/pkg/wrap"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/dennis-tra/parsec/pkg/wrap"
 )
 
 type Host struct {
@@ -53,6 +53,6 @@ func New(ctx context.Context) (*Host, error) {
 	newHost.DHT = dht
 	newHost.StartedAt = &now
 
-	log.WithField("localID", util.FmtPeerID(h.ID())).Info("Initialized new libp2p host")
+	log.WithField("localID", h.ID()).Info("Initialized new libp2p host")
 	return newHost, nil
 }
