@@ -1,0 +1,11 @@
+output   = "pkg/models"
+wipe     = true
+
+[psql]
+dbname = "parsec"
+host = "localhost"
+port = 5432
+user = "parsec"
+pass = "password"
+sslmode = "disable"
+blacklist = ["schema_migrations"]
