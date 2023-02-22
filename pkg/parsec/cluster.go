@@ -27,7 +27,7 @@ func (c *Cluster) NewNodes(n int) ([]*Node, error) {
 
 	parsecNodes := make([]*Node, len(clusterNodes))
 	for i, cn := range clusterNodes {
-		n, err := NewNode(cn, "localhost", 7070)
+		n, err := NewNode(cn, fmt.Sprintf("node-%d", i), "localhost", 7070)
 		if err != nil {
 			return nil, fmt.Errorf("new parsec node: %w", err)
 		}

@@ -10,16 +10,18 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// NodeCommand contains the crawl sub-command configuration.
-var NodeCommand = &cli.Command{
-	Name:   "node",
-	Action: NodeAction,
+// ServerCommand contains the crawl sub-command configuration.
+var ServerCommand = &cli.Command{
+	Name:   "server",
+	Action: ServerAction,
 	Flags:  []cli.Flag{},
 }
 
-// NodeAction is the function that is called when running `nebula crawl`.
-func NodeAction(c *cli.Context) error {
-	log.Infoln("Starting Parsec node...")
+// ServerAction is the function that is called when running `nebula crawl`.
+func ServerAction(c *cli.Context) error {
+	log.SetFormatter(&log.JSONFormatter{})
+
+	log.Infoln("Starting Parsec server...")
 
 	// Load configuration
 	conf, err := config.Init(c)
@@ -31,7 +33,7 @@ func NodeAction(c *cli.Context) error {
 
 	n, err := parsec.NewServer("localhost", 7070)
 	if err != nil {
-		return fmt.Errorf("new node: %w", n)
+		return fmt.Errorf("new node: %w", err)
 	}
 
 	log.Infoln("Listening and serving on", n.ListenAddr())

@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/guseggert/clustertest/cluster/docker"
-
 	"github.com/guseggert/clustertest/cluster/basic"
-
-	"github.com/dennis-tra/parsec/pkg/parsec"
-
+	"github.com/guseggert/clustertest/cluster/docker"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/dennis-tra/parsec/pkg/parsec"
+	"github.com/dennis-tra/parsec/pkg/util"
 )
 
 // ScheduleCommand contains the crawl sub-command configuration.
@@ -49,7 +48,7 @@ func ScheduleAction(c *cli.Context) error {
 	pc := parsec.NewCluster(basic.New(cl))
 
 	log.Infoln("Initializing nodes")
-	nodes, err := pc.NewNodes(1)
+	nodes, err := pc.NewNodes(2)
 	if err != nil {
 		return fmt.Errorf("new nodes: %w", err)
 	}
@@ -57,18 +56,21 @@ func ScheduleAction(c *cli.Context) error {
 	log.Infoln("sleeping...")
 	time.Sleep(5 * time.Second)
 
-	content, err := parsec.NewRandomContent()
+	content, err := util.NewRandomContent()
 	if err != nil {
 		return fmt.Errorf("new random content: %w", err)
 	}
-
-	if err = nodes[0].Provide(content); err != nil {
+	provide, err := nodes[0].Provide(content)
+	if err != nil {
 		return err
 	}
+	log.Infoln(provide)
 
-	if err = nodes[0].Retrieve(content.CID, 1); err != nil {
+	retrieval, err := nodes[1].Retrieve(content.CID, 1)
+	if err != nil {
 		return err
 	}
+	log.Infoln("TimeToFirstProviderRecord", retrieval.TimeToFirstProviderRecord())
 
 	<-c.Context.Done()
 
