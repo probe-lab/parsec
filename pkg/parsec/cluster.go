@@ -38,13 +38,16 @@ func (c *Cluster) NewNodes(n int) ([]*Node, error) {
 	return parsecNodes, nil
 }
 
-func (c *Cluster) NewNode() (*Node, error) {
-	nodes, err := c.NewNodes(1)
+func (c *Cluster) NewNode(num int) (*Node, error) {
+	cn, err := c.Cluster.NewNode()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new cluster node: %w", err)
 	}
-	if len(nodes) != 1 {
-		return nil, fmt.Errorf("expected 1 node, got %d", len(nodes))
+
+	n, err := NewNode(cn.Context(c.Ctx), fmt.Sprintf("node-%d", num), c.ServerHost, c.ServerPort)
+	if err != nil {
+		return nil, fmt.Errorf("new parsec node: %w", err)
 	}
-	return nodes[0], err
+
+	return n, err
 }

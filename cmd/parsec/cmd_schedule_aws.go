@@ -82,7 +82,7 @@ func ScheduleAWSAction(c *cli.Context) error {
 		pc := parsec.NewCluster(basic.New(cl).Context(c.Context), conf.ServerHost, conf.ServerPort)
 
 		log.Infoln("Initializing aws node")
-		n, err := pc.NewNode()
+		n, err := pc.NewNode(idx)
 		if err != nil {
 			return fmt.Errorf("new aws node: %w", err)
 		}
