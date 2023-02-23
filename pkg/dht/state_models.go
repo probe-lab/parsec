@@ -1,7 +1,6 @@
 package dht
 
 import (
-	"encoding/json"
 	"sort"
 	"time"
 
@@ -22,28 +21,6 @@ type DialSpan struct {
 	Error        error
 }
 
-func (ds *DialSpan) MarshalJSON() ([]byte, error) {
-	errStr := ""
-	if ds.Error != nil {
-		errStr = ds.Error.Error()
-	}
-	return json.Marshal(&struct {
-		RemotePeerID peer.ID
-		Maddr        ma.Multiaddr
-		Start        time.Time
-		End          time.Time
-		Trpt         string
-		Error        string
-	}{
-		RemotePeerID: ds.RemotePeerID,
-		Maddr:        ds.Maddr,
-		Start:        ds.Start,
-		End:          ds.End,
-		Trpt:         ds.Trpt,
-		Error:        errStr,
-	})
-}
-
 type ConnectionSpan struct {
 	RemotePeerID peer.ID
 	Maddr        ma.Multiaddr
@@ -58,33 +35,6 @@ type FindNodesSpan struct {
 	End          time.Time
 	CloserPeers  []*peer.AddrInfo
 	Error        error
-}
-
-func (fn *FindNodesSpan) MarshalJSON() ([]byte, error) {
-	cps := make([]string, len(fn.CloserPeers))
-	for i, cp := range fn.CloserPeers {
-		cps[i] = cp.ID.String()
-	}
-	errStr := ""
-	if fn.Error != nil {
-		errStr = fn.Error.Error()
-	}
-
-	return json.Marshal(&struct {
-		QueryID      uuid.UUID
-		RemotePeerID peer.ID
-		Start        time.Time
-		End          time.Time
-		CloserPeers  []string
-		Error        string
-	}{
-		QueryID:      fn.QueryID,
-		RemotePeerID: fn.RemotePeerID,
-		Start:        fn.Start,
-		End:          fn.End,
-		CloserPeers:  cps,
-		Error:        errStr,
-	})
 }
 
 type GetProvidersSpan struct {
@@ -105,28 +55,6 @@ type AddProvidersSpan struct {
 	ProviderAddrs []ma.Multiaddr
 	End           time.Time
 	Error         error
-}
-
-func (aps *AddProvidersSpan) MarshalJSON() ([]byte, error) {
-	errStr := ""
-	if aps.Error != nil {
-		errStr = aps.Error.Error()
-	}
-	return json.Marshal(&struct {
-		QueryID      uuid.UUID
-		RemotePeerID peer.ID
-		CID          string
-		Start        time.Time
-		End          time.Time
-		Error        string
-	}{
-		QueryID:      aps.QueryID,
-		RemotePeerID: aps.RemotePeerID,
-		CID:          aps.CID.String(),
-		Start:        aps.Start,
-		End:          aps.End,
-		Error:        errStr,
-	})
 }
 
 type PeerInfo struct {

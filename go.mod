@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	contrib.go.opencensus.io/integrations/ocsql v0.1.7
+	github.com/aws/aws-sdk-go v1.36.30
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/google/uuid v1.3.0
 	github.com/guseggert/clustertest v0.0.0-20230209223942-5fb8ce33d7b4
@@ -63,6 +64,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.15.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.1 // indirect
 	github.com/koron/go-ssdp v0.0.3 // indirect
@@ -133,4 +135,8 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
-replace github.com/libp2p/go-libp2p-kad-dht v0.21.1 => github.com/dennis-tra/go-libp2p-kad-dht v0.21.1-0.20230222194541-1f884cdd5d7b
+replace (
+	github.com/guseggert/clustertest v0.0.0-20230209223942-5fb8ce33d7b4 => github.com/dennis-tra/clustertest v0.0.0-20230216074629-ad6bc680a355
+	github.com/guseggert/clustertest-kubo v0.0.0-20230208164737-508b73711d48 => github.com/dennis-tra/clustertest-kubo v0.0.0-20230217091823-743f20088637
+	github.com/libp2p/go-libp2p-kad-dht v0.21.1 => github.com/dennis-tra/go-libp2p-kad-dht v0.21.1-0.20230222194541-1f884cdd5d7b
+)

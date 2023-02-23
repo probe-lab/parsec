@@ -1,17 +1,97 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/urfave/cli/v2"
 )
 
-// DefaultConfig the default configuration.
-var DefaultConfig = Config{
+type GlobalConfig struct {
+	Version       string
+	TelemetryHost string
+	TelemetryPort int
+	Debug         bool
+	LogLevel      int
+}
 
-	TelemetryHost:    "0.0.0.0",
-	TelemetryPort:    6666,
+var DefaultGlobalConfig = GlobalConfig{
+	TelemetryHost: "0.0.0.0",
+	TelemetryPort: 6666,
+	Debug:         false,
+	LogLevel:      4,
+}
+
+func (gc GlobalConfig) Apply(c *cli.Context) GlobalConfig {
+	newConfig := gc
+
+	newConfig.Version = c.App.Version
+
+	if c.IsSet("debug") {
+		newConfig.Debug = c.Bool("debug")
+	}
+	if c.IsSet("log-level") {
+		newConfig.LogLevel = c.Int("log-level")
+	}
+	if c.IsSet("telemetry-host") {
+		newConfig.TelemetryHost = c.String("telemetry-host")
+	}
+	if c.IsSet("telemetry-port") {
+		newConfig.TelemetryPort = c.Int("telemetry-port")
+	}
+
+	return newConfig
+}
+
+type ServerConfig struct {
+	GlobalConfig
+	ServerHost string
+	ServerPort int
+	PeerHost   string
+	PeerPort   int
+}
+
+var DefaultServerConfig = ServerConfig{
+	GlobalConfig: DefaultGlobalConfig,
+	ServerHost:   "localhost",
+	ServerPort:   7070,
+	PeerPort:     4001,
+}
+
+func (sc ServerConfig) Apply(c *cli.Context) ServerConfig {
+	newConfig := sc
+
+	newConfig.GlobalConfig = newConfig.GlobalConfig.Apply(c)
+
+	if c.IsSet("server-host") {
+		newConfig.ServerHost = c.String("server-host")
+	}
+	if c.IsSet("server-port") {
+		newConfig.ServerPort = c.Int("server-port")
+	}
+	if c.IsSet("peer-port") {
+		newConfig.PeerPort = c.Int("peer-port")
+	}
+
+	return newConfig
+}
+
+type ScheduleConfig struct {
+	GlobalConfig
+	ServerHost       string
+	ServerPort       int
+	DatabaseHost     string
+	DatabasePort     int
+	DatabaseName     string
+	DatabasePassword string
+	DatabaseUser     string
+	DatabaseSSLMode  string
+}
+
+var DefaultScheduleConfig = ScheduleConfig{
+	GlobalConfig:     DefaultGlobalConfig,
+	ServerHost:       "localhost",
+	ServerPort:       7070,
 	DatabaseHost:     "0.0.0.0",
 	DatabasePort:     5432,
 	DatabaseName:     "nebula",
@@ -20,95 +100,117 @@ var DefaultConfig = Config{
 	DatabaseSSLMode:  "disable",
 }
 
-// Config contains general user configuration.
-type Config struct {
-	// The version string of nebula
-	Version string `json:"-"`
+func (sc ScheduleConfig) Apply(c *cli.Context) ScheduleConfig {
+	newConfig := sc
 
-	// Determines where the prometheus and pprof hosts should bind to.
-	TelemetryHost string
+	newConfig.GlobalConfig = newConfig.GlobalConfig.Apply(c)
 
-	// Determines the port where prometheus and pprof serve the metrics endpoint.
-	TelemetryPort int
+	if c.IsSet("server-host") {
+		newConfig.ServerHost = c.String("server-host")
+	}
+	if c.IsSet("server-port") {
+		newConfig.ServerPort = c.Int("server-port")
+	}
+	if c.IsSet("db-host") {
+		newConfig.DatabaseHost = c.String("db-host")
+	}
+	if c.IsSet("db-port") {
+		newConfig.DatabasePort = c.Int("db-port")
+	}
+	if c.IsSet("db-name") {
+		newConfig.DatabaseName = c.String("db-name")
+	}
+	if c.IsSet("db-password") {
+		newConfig.DatabasePassword = c.String("db-password")
+	}
+	if c.IsSet("db-user") {
+		newConfig.DatabaseUser = c.String("db-user")
+	}
+	if c.IsSet("db-sslmode") {
+		newConfig.DatabaseSSLMode = c.String("db-sslmode")
+	}
 
-	// Determines the host address of the database.
-	DatabaseHost string
-
-	// Determines the port of the database.
-	DatabasePort int
-
-	// Determines the name of the database that should be used.
-	DatabaseName string
-
-	// Determines the password with which we access the database.
-	DatabasePassword string
-
-	// Determines the username with which we access the database.
-	DatabaseUser string
-
-	// Postgres SSL mode (should be one supported in https://www.postgresql.org/docs/current/libpq-ssl.html)
-	DatabaseSSLMode string
+	return newConfig
 }
 
-// Init takes the command line argument and tries to read the config file from that directory.
-func Init(c *cli.Context) (*Config, error) {
-	conf := DefaultConfig
-
-	// Apply command line argument configurations.
-	conf.apply(c)
-
-	// Print full configuration.
-	log.Debugln("Configuration (CLI params overwrite file config):\n", conf)
-
-	// Populate the context with the configuration.
-	return &conf, nil
+type ScheduleDockerConfig struct {
+	ScheduleConfig
+	Nodes int
 }
 
-// String prints the configuration as a json string
-func (c *Config) String() string {
-	data, _ := json.MarshalIndent(c, "", "  ")
-	return fmt.Sprintf("%s", data)
+var DefaultScheduleDockerConfig = ScheduleDockerConfig{
+	ScheduleConfig: DefaultScheduleConfig,
+	Nodes:          5,
 }
 
-// DatabaseSourceName returns the data source name string to be put into the sql.Open method.
-func (c *Config) DatabaseSourceName() string {
-	return fmt.Sprintf(
-		"host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
-		c.DatabaseHost,
-		c.DatabasePort,
-		c.DatabaseName,
-		c.DatabaseUser,
-		c.DatabasePassword,
-		c.DatabaseSSLMode,
-	)
+func (sdc ScheduleDockerConfig) Apply(c *cli.Context) ScheduleDockerConfig {
+	newConfig := sdc
+	
+	newConfig.ScheduleConfig = newConfig.ScheduleConfig.Apply(c)
+
+	if c.IsSet("nodes") {
+		newConfig.Nodes = c.Int("nodes")
+	}
+
+	return newConfig
 }
 
-// apply takes command line arguments and overwrites the respective configurations.
-func (c *Config) apply(ctx *cli.Context) {
-	c.Version = ctx.App.Version
+type ScheduleAWSConfig struct {
+	ScheduleConfig
+	NodeAgent                string
+	InstanceType             string
+	Regions                  []string
+	PublicSubnetIDs          []string
+	InstanceProfileARNs      []arn.ARN
+	InstanceSecurityGroupIDs []string
+	S3BucketARNs             []arn.ARN
+}
 
-	if ctx.IsSet("telemetry-host") {
-		c.TelemetryHost = ctx.String("telemetry-host")
+var DefaultScheduleAWSConfig = ScheduleAWSConfig{
+	ScheduleConfig: DefaultScheduleConfig,
+}
+
+func (sac ScheduleAWSConfig) Apply(c *cli.Context) (ScheduleAWSConfig, error) {
+	newConfig := sac
+
+	newConfig.ScheduleConfig = newConfig.ScheduleConfig.Apply(c)
+
+	if c.IsSet("nodeagent") {
+		newConfig.NodeAgent = c.String("nodeagent")
 	}
-	if ctx.IsSet("telemetry-port") {
-		c.TelemetryPort = ctx.Int("telemetry-port")
+	if c.IsSet("instance-type") {
+		newConfig.InstanceType = c.String("instance-type")
 	}
-	if ctx.IsSet("db-host") {
-		c.DatabaseHost = ctx.String("db-host")
+	if c.IsSet("regions") {
+		newConfig.Regions = c.StringSlice("regions")
 	}
-	if ctx.IsSet("db-port") {
-		c.DatabasePort = ctx.Int("db-port")
+	if c.IsSet("public-subnet-ids") {
+		newConfig.PublicSubnetIDs = c.StringSlice("public-subnet-ids")
 	}
-	if ctx.IsSet("db-name") {
-		c.DatabaseName = ctx.String("db-name")
+
+	if c.IsSet("instance-profile-arns") {
+		for _, arnStr := range c.StringSlice("instance-profile-arns") {
+			iparn, err := arn.Parse(arnStr)
+			if err != nil {
+				return ScheduleAWSConfig{}, fmt.Errorf("error parsing instnace profile arn: %w", err)
+			}
+			newConfig.InstanceProfileARNs = append(newConfig.InstanceProfileARNs, iparn)
+		}
 	}
-	if ctx.IsSet("db-password") {
-		c.DatabasePassword = ctx.String("db-password")
+
+	if c.IsSet("s3-bucket-arns") {
+		for _, arnStr := range c.StringSlice("s3-bucket-arns") {
+			s3arn, err := arn.Parse(arnStr)
+			if err != nil {
+				return ScheduleAWSConfig{}, fmt.Errorf("error parsing s3 bucket arn: %w", err)
+			}
+			newConfig.S3BucketARNs = append(newConfig.S3BucketARNs, s3arn)
+		}
 	}
-	if ctx.IsSet("db-user") {
-		c.DatabaseUser = ctx.String("db-user")
+
+	if c.IsSet("instance-security-group-ids") {
+		newConfig.InstanceSecurityGroupIDs = c.StringSlice("instance-security-group-ids")
 	}
-	if ctx.IsSet("db-sslmode") {
-		c.DatabaseSSLMode = ctx.String("db-sslmode")
-	}
+
+	return newConfig, nil
 }

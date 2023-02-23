@@ -1,6 +1,12 @@
-efault: all
+REPO_SERVER=019120760881.dkr.ecr.us-east-1.amazonaws.com
 
-all: clean build
+docker:
+	$(eval GIT_TAG := $(shell git rev-parse --short HEAD))
+	docker build -t "${REPO_SERVER}/probelab:tiros-${GIT_TAG}" .
+
+docker-push: docker
+	docker push "${REPO_SERVER}/probelab:tiros-${GIT_TAG}"
+
 
 test:
 	go test ./...
@@ -16,12 +22,6 @@ format:
 
 clean:
 	rm -r dist || true
-
-docker:
-	docker build -t dennistra/parsec:latest -t dennistra/parsec:`cat version` .
-
-docker-push: docker
-	docker push dennistra/parsec:latest dennistra/parsec:`cat version`
 
 tools:
 	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.15.2

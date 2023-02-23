@@ -32,10 +32,10 @@ type Server struct {
 	host   *dht.Host
 }
 
-func NewServer(h string, p int) (*Server, error) {
+func NewServer(serverHost string, serverPort int, peerPort int) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	parsecHost, err := dht.New(ctx)
+	parsecHost, err := dht.New(ctx, peerPort)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("new host: %w", err)
@@ -72,7 +72,7 @@ func NewServer(h string, p int) (*Server, error) {
 	s := &Server{
 		ctx:    ctx,
 		cancel: cancel,
-		addr:   fmt.Sprintf("%s:%d", h, p),
+		addr:   fmt.Sprintf("%s:%d", serverHost, serverPort),
 		host:   parsecHost,
 		done:   make(chan struct{}),
 	}

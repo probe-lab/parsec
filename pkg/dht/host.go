@@ -2,6 +2,7 @@ package dht
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -23,7 +24,7 @@ type Host struct {
 	MsgSender  *wrap.MessageSenderImpl
 }
 
-func New(ctx context.Context) (*Host, error) {
+func New(ctx context.Context, port int) (*Host, error) {
 	tcp, tcpTrpt := wrap.NewTCPTransport()
 	quic, quicTrpt := wrap.NewQuicTransport()
 	msgSender := wrap.NewMessageSenderImpl()
@@ -33,9 +34,20 @@ func New(ctx context.Context) (*Host, error) {
 		Transports: []*wrap.Notifier{tcp.Notifier, quic.Notifier},
 	}
 
+	addrs := []string{
+		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port),
+		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic", port),
+		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", port),
+		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1/webtransport", port),
+		fmt.Sprintf("/ip6/::/tcp/%d", port),
+		fmt.Sprintf("/ip6/::/udp/%d/quic", port),
+		fmt.Sprintf("/ip6/::/udp/%d/quic-v1", port),
+		fmt.Sprintf("/ip6/::/udp/%d/quic-v1/webtransport", port),
+	}
+
 	var dht *kaddht.IpfsDHT
 	h, err := libp2p.New(
-		libp2p.DefaultListenAddrs,
+		libp2p.ListenAddrStrings(addrs...),
 		libp2p.Transport(tcpTrpt),
 		libp2p.Transport(quicTrpt),
 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
@@ -54,5 +66,6 @@ func New(ctx context.Context) (*Host, error) {
 	newHost.StartedAt = &now
 
 	log.WithField("localID", h.ID()).Info("Initialized new libp2p host")
+
 	return newHost, nil
 }

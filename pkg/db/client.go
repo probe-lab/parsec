@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -12,45 +13,28 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	lru "github.com/hashicorp/golang-lru"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/dennis-tra/parsec/pkg/config"
 )
 
 //go:embed migrations
 var migrations embed.FS
 
-type Client struct {
-	ctx context.Context
-
-	// Reference to the configuration
-	conf *config.Config
-
-	// Database handler
-	dbh *sql.DB
-
-	// protocols cache
-	agentVersions *lru.Cache
-
-	// protocols cache
-	protocols *lru.Cache
-
-	// protocols set cache
-	protocolsSets *lru.Cache
+type DBClient struct {
+	// Database handle
+	handle *sql.DB
 }
 
-// InitClient establishes a database connection with the provided configuration and applies any pending
+// InitDBClient establishes a database connection with the provided configuration and applies any pending
 // migrations
-func InitClient(ctx context.Context, conf *config.Config) (*Client, error) {
+func InitDBClient(ctx context.Context, host string, port int, name string, user string, password string, ssl string) (*DBClient, error) {
 	log.WithFields(log.Fields{
-		"host": conf.DatabaseHost,
-		"port": conf.DatabasePort,
-		"name": conf.DatabaseName,
-		"user": conf.DatabaseUser,
-		"ssl":  conf.DatabaseSSLMode,
+		"host": host,
+		"port": port,
+		"name": name,
+		"user": user,
+		"ssl":  ssl,
 	}).Infoln("Initializing database client")
 
 	driverName, err := ocsql.Register("postgres")
@@ -58,40 +42,43 @@ func InitClient(ctx context.Context, conf *config.Config) (*Client, error) {
 		return nil, errors.Wrap(err, "register ocsql")
 	}
 
+	connStr := fmt.Sprintf(
+		"host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
+		host, port, name, user, password, ssl,
+	)
+
 	// Open database handle
-	dbh, err := sql.Open(driverName, conf.DatabaseSourceName())
+	db, err := sql.Open(driverName, connStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "opening database")
+		return nil, fmt.Errorf("opening database: %w", err)
 	}
 
 	// Ping database to verify connection.
-	if err = dbh.Ping(); err != nil {
-		return nil, errors.Wrap(err, "pinging database")
+	if err = db.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 
-	client := &Client{ctx: ctx, conf: conf, dbh: dbh}
-	client.applyMigrations(conf, dbh)
+	client := &DBClient{handle: db}
 
-	return client, nil
+	return client, client.applyMigrations(db, name)
 }
 
-func (c *Client) Handle() *sql.DB {
-	return c.dbh
+func (c *DBClient) Handle() *sql.DB {
+	return c.handle
 }
 
-func (c *Client) Close() error {
-	return c.dbh.Close()
+func (c *DBClient) Close() error {
+	return c.handle.Close()
 }
 
-func (c *Client) applyMigrations(conf *config.Config, dbh *sql.DB) {
-	tmpDir, err := os.MkdirTemp("", "nebula-"+conf.Version)
+func (c *DBClient) applyMigrations(db *sql.DB, name string) error {
+	tmpDir, err := os.MkdirTemp("", "parsec")
 	if err != nil {
-		log.WithError(err).WithField("pattern", "nebula-"+conf.Version).Warnln("Could not create tmp directory for migrations")
-		return
+		return fmt.Errorf("create migrations tmp dir: %w", err)
 	}
 	defer func() {
 		if err = os.RemoveAll(tmpDir); err != nil {
-			log.WithError(err).WithField("tmpDir", tmpDir).Warnln("Could not clean up tmp directory")
+			log.WithField("tmpDir", tmpDir).WithError(err).Warnln("Could not clean up tmp directory")
 		}
 	}()
 	log.WithField("dir", tmpDir).Debugln("Created temporary directory")
@@ -104,31 +91,29 @@ func (c *Client) applyMigrations(conf *config.Config, dbh *sql.DB) {
 
 		data, err := migrations.ReadFile(path)
 		if err != nil {
-			return errors.Wrap(err, "read file")
+			return fmt.Errorf("read file: %w", err)
 		}
 
 		return os.WriteFile(join, data, 0o644)
 	})
 	if err != nil {
-		log.WithError(err).Warnln("Could not create migrations files")
-		return
+		return fmt.Errorf("create migrations files: %w", err)
 	}
 
 	// Apply migrations
-	driver, err := postgres.WithInstance(dbh, &postgres.Config{})
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		log.WithError(err).Warnln("Could not create driver instance")
-		return
+		return fmt.Errorf("create driver instance: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(tmpDir, "migrations"), conf.DatabaseName, driver)
+	m, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(tmpDir, "migrations"), name, driver)
 	if err != nil {
-		log.WithError(err).Warnln("Could not create migrate instance")
-		return
+		return fmt.Errorf("create migrate instance: %w", err)
 	}
 
 	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		log.WithError(err).Warnln("Couldn't apply migrations")
-		return
+		return fmt.Errorf("apply migrations: %w", err)
 	}
+
+	return nil
 }
