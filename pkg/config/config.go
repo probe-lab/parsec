@@ -80,6 +80,7 @@ type ScheduleConfig struct {
 	GlobalConfig
 	ServerHost       string
 	ServerPort       int
+	DryRun           bool
 	DatabaseHost     string
 	DatabasePort     int
 	DatabaseName     string
@@ -92,11 +93,11 @@ var DefaultScheduleConfig = ScheduleConfig{
 	GlobalConfig:     DefaultGlobalConfig,
 	ServerHost:       "localhost",
 	ServerPort:       7070,
-	DatabaseHost:     "0.0.0.0",
+	DatabaseHost:     "localhost",
 	DatabasePort:     5432,
-	DatabaseName:     "nebula",
+	DatabaseName:     "parsec",
 	DatabasePassword: "password",
-	DatabaseUser:     "nebula",
+	DatabaseUser:     "parsec",
 	DatabaseSSLMode:  "disable",
 }
 
@@ -110,6 +111,9 @@ func (sc ScheduleConfig) Apply(c *cli.Context) ScheduleConfig {
 	}
 	if c.IsSet("server-port") {
 		newConfig.ServerPort = c.Int("server-port")
+	}
+	if c.IsSet("dry-run") {
+		newConfig.DryRun = c.Bool("dry-run")
 	}
 	if c.IsSet("db-host") {
 		newConfig.DatabaseHost = c.String("db-host")
@@ -145,7 +149,7 @@ var DefaultScheduleDockerConfig = ScheduleDockerConfig{
 
 func (sdc ScheduleDockerConfig) Apply(c *cli.Context) ScheduleDockerConfig {
 	newConfig := sdc
-	
+
 	newConfig.ScheduleConfig = newConfig.ScheduleConfig.Apply(c)
 
 	if c.IsSet("nodes") {

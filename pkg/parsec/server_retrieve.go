@@ -1,23 +1,20 @@
 package parsec
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/dennis-tra/parsec/pkg/util"
+
 	"github.com/ipfs/go-cid"
 	"github.com/julienschmidt/httprouter"
-	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/dennis-tra/parsec/pkg/dht"
 )
 
-type RetrieveRequest struct {
-	Count int
-}
+type RetrieveRequest struct{}
 
 func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	ctx := r.Context()
@@ -39,19 +36,24 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 		return
 	}
 
-	state := dht.NewRetrievalState(s.host, c)
-	ctx = state.Register(ctx)
 	log.WithField("cid", c.String()).Infoln("Start finding providers")
-	state.Start = time.Now()
-	for provider := range s.host.DHT.FindProvidersAsync(ctx, c, rr.Count) {
-		log.WithField("cid", c.String()).WithField("providerID", provider.ID).Infoln("Found Provider")
+	start := time.Now()
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	provider, ok := <-s.host.DHT.FindProvidersAsync(timeoutCtx, c, 1)
+	end := time.Now()
+
+	resp := RetrievalResponse{
+		Duration: end.Sub(start),
 	}
-	state.End = time.Now()
-	log.WithField("cid", c.String()).Infoln("Done finding providers")
 
-	state.Unregister()
-
-	resp := retrievalResponseFromState(state)
+	if ok {
+		resp.Error = "not found"
+		log.WithField("cid", c.String()).Infoln("Could not find providers")
+	} else {
+		log.WithField("cid", c.String()).WithField("provider", util.FmtPeerID(provider.ID)).Infoln("Done finding providers")
+	}
 
 	data, err = json.Marshal(resp)
 	if err != nil {
@@ -68,67 +70,6 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 }
 
 type RetrievalResponse struct {
-	CommonResponse
-	GetProviders []GetProvider
-}
-
-type GetProvider struct {
-	QueryID      uuid.UUID
-	RemotePeerID peer.ID
-	Start        time.Time
-	End          time.Time
-	CloserPeers  []peer.ID
-	Providers    []peer.ID
-	Error        string
-}
-
-func retrievalResponseFromState(state *dht.RetrievalState) *RetrievalResponse {
-	resp := RetrievalResponse{
-		CommonResponse: CommonResponseFromState(state.CommonState),
-		GetProviders:   make([]GetProvider, len(state.GetProviders)),
-	}
-
-	for i, gp := range state.GetProviders {
-		cps := make([]peer.ID, len(gp.CloserPeers))
-		for i, cp := range gp.CloserPeers {
-			cps[i] = cp.ID
-		}
-
-		providers := make([]peer.ID, len(gp.Providers))
-		for i, provider := range gp.Providers {
-			providers[i] = provider.ID
-		}
-
-		errStr := ""
-		if gp.Error != nil {
-			errStr = gp.Error.Error()
-		}
-
-		resp.GetProviders[i] = GetProvider{
-			QueryID:      gp.QueryID,
-			RemotePeerID: gp.RemotePeerID,
-			Start:        gp.Start,
-			End:          gp.End,
-			CloserPeers:  cps,
-			Providers:    providers,
-			Error:        errStr,
-		}
-	}
-
-	return &resp
-}
-
-func (r RetrievalResponse) TimeToFirstProviderRecord() time.Duration {
-	firstProviderTime := time.Time{}
-	for _, gp := range r.GetProviders {
-		if len(gp.Providers) > 0 && (gp.End.Before(firstProviderTime) || firstProviderTime.IsZero()) {
-			firstProviderTime = gp.End
-		}
-	}
-
-	if firstProviderTime.IsZero() {
-		return 0
-	}
-
-	return firstProviderTime.Sub(r.Start)
+	Duration time.Duration
+	Error    string
 }

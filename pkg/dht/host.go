@@ -11,29 +11,16 @@ import (
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/dennis-tra/parsec/pkg/wrap"
 )
 
 type Host struct {
 	host.Host
 
-	DHT        *kaddht.IpfsDHT
-	StartedAt  *time.Time
-	Transports []*wrap.Notifier
-	MsgSender  *wrap.MessageSenderImpl
+	DHT       *kaddht.IpfsDHT
+	StartedAt *time.Time
 }
 
 func New(ctx context.Context, port int) (*Host, error) {
-	tcp, tcpTrpt := wrap.NewTCPTransport()
-	quic, quicTrpt := wrap.NewQuicTransport()
-	msgSender := wrap.NewMessageSenderImpl()
-
-	newHost := &Host{
-		MsgSender:  msgSender,
-		Transports: []*wrap.Notifier{tcp.Notifier, quic.Notifier},
-	}
-
 	addrs := []string{
 		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port),
 		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic", port),
@@ -48,11 +35,9 @@ func New(ctx context.Context, port int) (*Host, error) {
 	var dht *kaddht.IpfsDHT
 	h, err := libp2p.New(
 		libp2p.ListenAddrStrings(addrs...),
-		libp2p.Transport(tcpTrpt),
-		libp2p.Transport(quicTrpt),
 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 			var err error
-			dht, err = kaddht.New(ctx, h, kaddht.MessageSenderImpl(msgSender.Init))
+			dht, err = kaddht.New(ctx, h)
 			return dht, err
 		}),
 	)
@@ -61,9 +46,11 @@ func New(ctx context.Context, port int) (*Host, error) {
 	}
 
 	now := time.Now()
-	newHost.Host = h
-	newHost.DHT = dht
-	newHost.StartedAt = &now
+	newHost := &Host{
+		Host:      h,
+		DHT:       dht,
+		StartedAt: &now,
+	}
 
 	log.WithField("localID", h.ID()).Info("Initialized new libp2p host")
 
