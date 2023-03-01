@@ -63,6 +63,7 @@ func (ps *ProvideState) consumeRPCEvents(rpcEvents <-chan interface{}) {
 }
 
 func (ps *ProvideState) trackFindNodeRequest(evt *wrap.RPCSendRequestEndedEvent) {
+	log.Infoln("TRACK FIND_NODE")
 	fns := &FindNodesSpan{
 		QueryID:      evt.QueryID,
 		RemotePeerID: evt.RemotePeer,
@@ -85,6 +86,7 @@ func (ps *ProvideState) trackFindNodeRequest(evt *wrap.RPCSendRequestEndedEvent)
 }
 
 func (ps *ProvideState) trackAddProvidersRequest(evt *wrap.RPCSendMessageEndedEvent) {
+	log.Infoln("TRACK ADD_PROVIDERS")
 	aps := &AddProvidersSpan{
 		QueryID:       evt.QueryID,
 		CID:           ps.CID,

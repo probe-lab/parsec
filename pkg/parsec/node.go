@@ -20,16 +20,18 @@ import (
 type Node struct {
 	*basic.Node
 
-	id     string
-	ctx    context.Context
-	client http.Client
-	host   string
-	port   int
-	fmt    log.Formatter
-	done   chan struct{}
+	id          string
+	ctx         context.Context
+	client      http.Client
+	host        string
+	port        int
+	fmt         log.Formatter
+	done        chan struct{}
+	cluster     *Cluster
+	onlineSince time.Time
 }
 
-func NewNode(n *basic.Node, id string, host string, port int) (*Node, error) {
+func NewNode(c *Cluster, n *basic.Node, id string, host string, port int) (*Node, error) {
 	logEntry := log.WithField("nodeID", id)
 	logEntry.Infoln("Reading parsec binary...")
 
@@ -72,13 +74,14 @@ func NewNode(n *basic.Node, id string, host string, port int) (*Node, error) {
 
 	logger := log.New()
 	parsecNode := &Node{
-		Node:   n,
-		id:     id,
-		client: httpClient,
-		host:   host,
-		port:   port,
-		fmt:    logger.Formatter,
-		done:   make(chan struct{}),
+		Node:    n,
+		cluster: c,
+		id:      id,
+		client:  httpClient,
+		host:    host,
+		port:    port,
+		fmt:     logger.Formatter,
+		done:    make(chan struct{}),
 	}
 
 	logger.Formatter = parsecNode
@@ -111,25 +114,31 @@ func NewNode(n *basic.Node, id string, host string, port int) (*Node, error) {
 	return parsecNode, nil
 }
 
-func (n *Node) WaitForAPI(ctx context.Context) error {
-	t := time.NewTicker(time.Second)
+func (n *Node) WaitForAPI(ctx context.Context) (*InfoResponse, error) {
+	tick := 5 * time.Second
+	t := time.NewTicker(tick)
 	for {
 		select {
 		case <-t.C:
 			log.WithField("node", n.id).Infoln("Check API availability...")
-			_, err := n.Info(ctx)
+			info, err := n.Info(ctx)
 			if err == nil {
-				return nil
+				n.onlineSince = time.Now()
+				return info, nil
 			}
-			t.Reset(time.Second)
+			t.Reset(tick)
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		}
 	}
 }
 
 func (n *Node) ID() string {
 	return n.id
+}
+
+func (n *Node) Cluster() *Cluster {
+	return n.cluster
 }
 
 func (n *Node) Info(ctx context.Context) (*InfoResponse, error) {

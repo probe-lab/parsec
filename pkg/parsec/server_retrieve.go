@@ -41,6 +41,7 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 
 	state := dht.NewRetrievalState(s.host, c)
 	ctx = state.Register(ctx)
+
 	log.WithField("cid", c.String()).Infoln("Start finding providers")
 	state.Start = time.Now()
 	for provider := range s.host.DHT.FindProvidersAsync(ctx, c, rr.Count) {

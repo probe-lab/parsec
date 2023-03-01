@@ -4,18 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime/debug"
+	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/volatiletech/null/v8"
+	"github.com/volatiletech/sqlboiler/v4/boil"
+
+	"github.com/dennis-tra/parsec/pkg/models"
 )
 
 //go:embed migrations
@@ -116,4 +124,45 @@ func (c *DBClient) applyMigrations(db *sql.DB, name string) error {
 	}
 
 	return nil
+}
+
+func (c *DBClient) InitRun(ctx context.Context, bi *debug.BuildInfo) (*models.Run, error) {
+	biData, err := json.Marshal(bi)
+	if err != nil {
+		return nil, fmt.Errorf("marshal build info data: %w", err)
+	}
+
+	dbRun := &models.Run{
+		Dependencies: biData,
+		StartedAt:    time.Now(),
+	}
+
+	return dbRun, dbRun.Insert(ctx, c.handle, boil.Infer())
+}
+
+func (c *DBClient) InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, region string, it string, bi *debug.BuildInfo) (*models.Node, error) {
+	biData, err := json.Marshal(bi)
+	if err != nil {
+		return nil, fmt.Errorf("marshal build info data: %w", err)
+	}
+
+	n := &models.Node{
+		RunID:        dbRunID,
+		PeerID:       peerID.String(),
+		Region:       region,
+		InstanceType: it,
+		Dependencies: biData,
+	}
+
+	return n, n.Insert(ctx, c.handle, boil.Infer())
+}
+
+func (c *DBClient) InsertMeasurement(ctx context.Context, dbNodeID int, metric string, value float64) (*models.Measurement, error) {
+	m := &models.Measurement{
+		NodeID: dbNodeID,
+		Metric: metric,
+		Value:  null.Float64From(value),
+	}
+
+	return m, m.Insert(ctx, c.handle, boil.Infer())
 }

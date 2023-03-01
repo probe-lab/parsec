@@ -79,7 +79,7 @@ func ScheduleAWSAction(c *cli.Context) error {
 			WithS3BucketARN(conf.S3BucketARNs[idx]).
 			WithInstanceType(conf.InstanceType)
 
-		pc := parsec.NewCluster(basic.New(cl).Context(c.Context), conf.ServerHost, conf.ServerPort)
+		pc := parsec.NewCluster(basic.New(cl).Context(c.Context), region, conf.InstanceType, conf.ServerHost, conf.ServerPort)
 
 		log.Infoln("Initializing aws node")
 		n, err := pc.NewNode(idx)
