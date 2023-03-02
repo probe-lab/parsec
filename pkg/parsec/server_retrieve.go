@@ -1,9 +1,8 @@
 package parsec
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"time"
@@ -12,6 +11,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/dennis-tra/parsec/pkg/util"
 )
 
 type RetrieveRequest struct{}
@@ -36,21 +37,28 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 		return
 	}
 
-	log.WithField("cid", c.String()).Infoln("Start finding providers")
-
-	provider, duration, err := s.measureRetrieval(ctx, c)
 	resp := RetrievalResponse{
-		Duration:         duration,
 		RoutingTableSize: s.host.DHT.RoutingTable().Size(),
 	}
-	if err != nil {
-		resp.Error = err.Error()
-	} else {
-		s.host.Network().ClosePeer(provider)
-		s.host.Peerstore().RemovePeer(provider)
-	}
+	logEntry := log.WithField("cid", c.String()).WithField("rtSize", resp.RoutingTableSize)
 
-	log.WithField("cid", c.String()).WithError(err).Infoln("Done finding providers")
+	logEntry.Infoln("Start finding providers")
+
+	// here's where the magic happens
+	start := time.Now()
+	provider := <-s.host.DHT.FindProvidersAsync(ctx, c, 1)
+	resp.Duration = time.Since(start)
+
+	logEntry = logEntry.WithField("dur", resp.Duration.Seconds())
+
+	if errors.Is(provider.ID.Validate(), peer.ErrEmptyPeerID) {
+		resp.Error = "not found"
+		logEntry.Infoln("Didn't find provider")
+	} else {
+		s.host.Network().ClosePeer(provider.ID)
+		s.host.Peerstore().RemovePeer(provider.ID)
+		logEntry.WithField("provider", util.FmtPeerID(provider.ID)).Infoln("Found provider")
+	}
 
 	data, err = json.Marshal(resp)
 	if err != nil {
@@ -64,16 +72,6 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-}
-
-func (s *Server) measureRetrieval(ctx context.Context, c cid.Cid) (peer.ID, time.Duration, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-	start := time.Now()
-	for provider := range s.host.DHT.FindProvidersAsync(timeoutCtx, c, 1) {
-		return provider.ID, time.Since(start), nil
-	}
-	return "", time.Since(start), fmt.Errorf("not found")
 }
 
 type RetrievalResponse struct {
