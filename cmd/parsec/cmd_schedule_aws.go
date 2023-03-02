@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/dennis-tra/parsec/pkg/parsec"
@@ -66,29 +68,45 @@ func ScheduleAWSAction(c *cli.Context) error {
 		return fmt.Errorf("parse command line flags: %w", err)
 	}
 
-	var nodes []*parsec.Node
-	for idx, region := range conf.Regions {
-		// capture loop variable
-		r := region
-		cl := aws.NewCluster().
-			WithNodeAgentBin(conf.NodeAgent).
-			WithSession(session.Must(session.NewSession(&awssdk.Config{Region: &r}))).
-			WithPublicSubnetID(conf.PublicSubnetIDs[idx]).
-			WithInstanceProfileARN(conf.InstanceProfileARNs[idx]).
-			WithInstanceSecurityGroupID(conf.InstanceSecurityGroupIDs[idx]).
-			WithS3BucketARN(conf.S3BucketARNs[idx]).
-			WithInstanceType(conf.InstanceType)
+	nodesChan := make(chan *parsec.Node, len(conf.Regions))
 
-		pc := parsec.NewCluster(basic.New(cl).Context(c.Context), region, conf.InstanceType, conf.ServerHost, conf.ServerPort)
+	errg := errgroup.Group{}
+	for i, region := range conf.Regions {
+		i := i
+		region := region
+		errg.Go(func() error {
+			cl := aws.NewCluster().
+				WithNodeAgentBin(conf.NodeAgent).
+				WithSession(session.Must(session.NewSession(&awssdk.Config{Region: &region}))).
+				WithPublicSubnetID(conf.PublicSubnetIDs[i]).
+				WithInstanceProfileARN(conf.InstanceProfileARNs[i]).
+				WithInstanceSecurityGroupID(conf.InstanceSecurityGroupIDs[i]).
+				WithS3BucketARN(conf.S3BucketARNs[i]).
+				WithInstanceType(conf.InstanceType)
 
-		log.Infoln("Initializing aws node")
-		n, err := pc.NewNode(idx)
-		if err != nil {
-			return fmt.Errorf("new aws node: %w", err)
-		}
+			pc := parsec.NewCluster(basic.New(cl).Context(c.Context), region, conf.InstanceType, conf.ServerHost, conf.ServerPort)
 
-		nodes = append(nodes, n)
+			log.Infoln("Initializing aws node")
+			n, err := pc.NewNode(i)
+			if err != nil {
+				return fmt.Errorf("new aws node: %w", err)
+			}
+
+			nodesChan <- n
+
+			return nil
+		})
 	}
+
+	if err = errg.Wait(); err != nil {
+		return fmt.Errorf("wait for new nodes: %w", err)
+	}
+
+	nodes := make([]*parsec.Node, len(conf.Regions))
+	for i := 0; i < len(conf.Regions); i++ {
+		nodes[i] = <-nodesChan
+	}
+	close(nodesChan)
 
 	return ScheduleAction(c, nodes)
 }
