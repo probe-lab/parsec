@@ -6,6 +6,7 @@ CREATE TABLE provides
     node_id    INT         NOT NULL,
     rt_size    INT         NOT NULL,
     duration   FLOAT       NOT NULL,
+    cid        TEXT        NOT NULL,
     error      TEXT,
     created_at TIMESTAMPTZ NOT NULL,
 

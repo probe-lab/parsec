@@ -169,6 +169,7 @@ func (c *DBClient) InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, 
 
 func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *parsec.RetrievalResponse) (*models.Retrieval, error) {
 	r := &models.Retrieval{
+		Cid:      retrieval.CID,
 		NodeID:   dbNodeID,
 		Duration: retrieval.Duration.Seconds(),
 		RTSize:   retrieval.RoutingTableSize,
@@ -180,6 +181,7 @@ func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval 
 
 func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, provide *parsec.ProvideResponse) (*models.Provide, error) {
 	p := &models.Provide{
+		Cid:      provide.CID,
 		NodeID:   dbNodeID,
 		Duration: provide.Duration.Seconds(),
 		RTSize:   provide.RoutingTableSize,

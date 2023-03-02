@@ -38,6 +38,7 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	}
 
 	resp := RetrievalResponse{
+		CID:              c.String(),
 		RoutingTableSize: s.host.DHT.RoutingTable().Size(),
 	}
 	logEntry := log.WithField("cid", c.String()).WithField("rtSize", resp.RoutingTableSize)
@@ -75,6 +76,7 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 }
 
 type RetrievalResponse struct {
+	CID              string
 	Duration         time.Duration
 	RoutingTableSize int
 	Error            string

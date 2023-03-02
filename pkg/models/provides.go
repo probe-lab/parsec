@@ -28,6 +28,7 @@ type Provide struct {
 	NodeID    int         `boil:"node_id" json:"node_id" toml:"node_id" yaml:"node_id"`
 	RTSize    int         `boil:"rt_size" json:"rt_size" toml:"rt_size" yaml:"rt_size"`
 	Duration  float64     `boil:"duration" json:"duration" toml:"duration" yaml:"duration"`
+	Cid       string      `boil:"cid" json:"cid" toml:"cid" yaml:"cid"`
 	Error     null.String `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
 	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
@@ -40,6 +41,7 @@ var ProvideColumns = struct {
 	NodeID    string
 	RTSize    string
 	Duration  string
+	Cid       string
 	Error     string
 	CreatedAt string
 }{
@@ -47,6 +49,7 @@ var ProvideColumns = struct {
 	NodeID:    "node_id",
 	RTSize:    "rt_size",
 	Duration:  "duration",
+	Cid:       "cid",
 	Error:     "error",
 	CreatedAt: "created_at",
 }
@@ -56,6 +59,7 @@ var ProvideTableColumns = struct {
 	NodeID    string
 	RTSize    string
 	Duration  string
+	Cid       string
 	Error     string
 	CreatedAt string
 }{
@@ -63,6 +67,7 @@ var ProvideTableColumns = struct {
 	NodeID:    "provides.node_id",
 	RTSize:    "provides.rt_size",
 	Duration:  "provides.duration",
+	Cid:       "provides.cid",
 	Error:     "provides.error",
 	CreatedAt: "provides.created_at",
 }
@@ -141,6 +146,7 @@ var ProvideWhere = struct {
 	NodeID    whereHelperint
 	RTSize    whereHelperint
 	Duration  whereHelperfloat64
+	Cid       whereHelperstring
 	Error     whereHelpernull_String
 	CreatedAt whereHelpertime_Time
 }{
@@ -148,6 +154,7 @@ var ProvideWhere = struct {
 	NodeID:    whereHelperint{field: "\"provides\".\"node_id\""},
 	RTSize:    whereHelperint{field: "\"provides\".\"rt_size\""},
 	Duration:  whereHelperfloat64{field: "\"provides\".\"duration\""},
+	Cid:       whereHelperstring{field: "\"provides\".\"cid\""},
 	Error:     whereHelpernull_String{field: "\"provides\".\"error\""},
 	CreatedAt: whereHelpertime_Time{field: "\"provides\".\"created_at\""},
 }
@@ -180,8 +187,8 @@ func (r *provideR) GetNode() *Node {
 type provideL struct{}
 
 var (
-	provideAllColumns            = []string{"id", "node_id", "rt_size", "duration", "error", "created_at"}
-	provideColumnsWithoutDefault = []string{"node_id", "rt_size", "duration", "created_at"}
+	provideAllColumns            = []string{"id", "node_id", "rt_size", "duration", "cid", "error", "created_at"}
+	provideColumnsWithoutDefault = []string{"node_id", "rt_size", "duration", "cid", "created_at"}
 	provideColumnsWithDefault    = []string{"id", "error"}
 	providePrimaryKeyColumns     = []string{"id"}
 	provideGeneratedColumns      = []string{"id"}

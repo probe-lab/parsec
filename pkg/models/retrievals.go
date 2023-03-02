@@ -28,6 +28,7 @@ type Retrieval struct {
 	NodeID    int         `boil:"node_id" json:"node_id" toml:"node_id" yaml:"node_id"`
 	RTSize    int         `boil:"rt_size" json:"rt_size" toml:"rt_size" yaml:"rt_size"`
 	Duration  float64     `boil:"duration" json:"duration" toml:"duration" yaml:"duration"`
+	Cid       string      `boil:"cid" json:"cid" toml:"cid" yaml:"cid"`
 	Error     null.String `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
 	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
@@ -40,6 +41,7 @@ var RetrievalColumns = struct {
 	NodeID    string
 	RTSize    string
 	Duration  string
+	Cid       string
 	Error     string
 	CreatedAt string
 }{
@@ -47,6 +49,7 @@ var RetrievalColumns = struct {
 	NodeID:    "node_id",
 	RTSize:    "rt_size",
 	Duration:  "duration",
+	Cid:       "cid",
 	Error:     "error",
 	CreatedAt: "created_at",
 }
@@ -56,6 +59,7 @@ var RetrievalTableColumns = struct {
 	NodeID    string
 	RTSize    string
 	Duration  string
+	Cid       string
 	Error     string
 	CreatedAt string
 }{
@@ -63,6 +67,7 @@ var RetrievalTableColumns = struct {
 	NodeID:    "retrievals.node_id",
 	RTSize:    "retrievals.rt_size",
 	Duration:  "retrievals.duration",
+	Cid:       "retrievals.cid",
 	Error:     "retrievals.error",
 	CreatedAt: "retrievals.created_at",
 }
@@ -74,6 +79,7 @@ var RetrievalWhere = struct {
 	NodeID    whereHelperint
 	RTSize    whereHelperint
 	Duration  whereHelperfloat64
+	Cid       whereHelperstring
 	Error     whereHelpernull_String
 	CreatedAt whereHelpertime_Time
 }{
@@ -81,6 +87,7 @@ var RetrievalWhere = struct {
 	NodeID:    whereHelperint{field: "\"retrievals\".\"node_id\""},
 	RTSize:    whereHelperint{field: "\"retrievals\".\"rt_size\""},
 	Duration:  whereHelperfloat64{field: "\"retrievals\".\"duration\""},
+	Cid:       whereHelperstring{field: "\"retrievals\".\"cid\""},
 	Error:     whereHelpernull_String{field: "\"retrievals\".\"error\""},
 	CreatedAt: whereHelpertime_Time{field: "\"retrievals\".\"created_at\""},
 }
@@ -113,8 +120,8 @@ func (r *retrievalR) GetNode() *Node {
 type retrievalL struct{}
 
 var (
-	retrievalAllColumns            = []string{"id", "node_id", "rt_size", "duration", "error", "created_at"}
-	retrievalColumnsWithoutDefault = []string{"node_id", "rt_size", "duration", "created_at"}
+	retrievalAllColumns            = []string{"id", "node_id", "rt_size", "duration", "cid", "error", "created_at"}
+	retrievalColumnsWithoutDefault = []string{"node_id", "rt_size", "duration", "cid", "created_at"}
 	retrievalColumnsWithDefault    = []string{"id", "error"}
 	retrievalPrimaryKeyColumns     = []string{"id"}
 	retrievalGeneratedColumns      = []string{"id"}
