@@ -3,14 +3,14 @@ package parsec
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/dennis-tra/parsec/pkg/util"
-
 	"github.com/ipfs/go-cid"
 	"github.com/julienschmidt/httprouter"
+	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -37,23 +37,20 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	}
 
 	log.WithField("cid", c.String()).Infoln("Start finding providers")
-	start := time.Now()
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
 
-	provider, ok := <-s.host.DHT.FindProvidersAsync(timeoutCtx, c, 1)
-	end := time.Now()
-
+	provider, duration, err := s.measureRetrieval(ctx, c)
 	resp := RetrievalResponse{
-		Duration: end.Sub(start),
+		Duration:         duration,
+		RoutingTableSize: s.host.DHT.RoutingTable().Size(),
+	}
+	if err != nil {
+		resp.Error = err.Error()
+	} else {
+		s.host.Network().ClosePeer(provider)
+		s.host.Peerstore().RemovePeer(provider)
 	}
 
-	if ok {
-		resp.Error = "not found"
-		log.WithField("cid", c.String()).Infoln("Could not find providers")
-	} else {
-		log.WithField("cid", c.String()).WithField("provider", util.FmtPeerID(provider.ID)).Infoln("Done finding providers")
-	}
+	log.WithField("cid", c.String()).WithError(err).Infoln("Done finding providers")
 
 	data, err = json.Marshal(resp)
 	if err != nil {
@@ -69,7 +66,18 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	}
 }
 
+func (s *Server) measureRetrieval(ctx context.Context, c cid.Cid) (peer.ID, time.Duration, error) {
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	start := time.Now()
+	for provider := range s.host.DHT.FindProvidersAsync(timeoutCtx, c, 1) {
+		return provider.ID, time.Since(start), nil
+	}
+	return "", time.Since(start), fmt.Errorf("not found")
+}
+
 type RetrievalResponse struct {
-	Duration time.Duration
-	Error    string
+	Duration         time.Duration
+	RoutingTableSize int
+	Error            string
 }

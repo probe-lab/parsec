@@ -4,7 +4,8 @@ CREATE TABLE retrievals
 (
     id         INT GENERATED ALWAYS AS IDENTITY,
     node_id    INT         NOT NULL,
-    duration   FLOAT,
+    rt_size    INT         NOT NULL,
+    duration   FLOAT       NOT NULL,
     error      TEXT,
     created_at TIMESTAMPTZ NOT NULL,
 

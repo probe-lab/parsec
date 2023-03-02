@@ -46,7 +46,8 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 	log.WithField("cid", content.CID.String()).Infoln("Done providing content...")
 
 	resp := ProvideResponse{
-		Duration: end.Sub(start),
+		Duration:         end.Sub(start),
+		RoutingTableSize: s.host.DHT.RoutingTable().Size(),
 	}
 
 	if err != nil {
@@ -68,6 +69,7 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 }
 
 type ProvideResponse struct {
-	Duration time.Duration
-	Error    string
+	Duration         time.Duration
+	Error            string
+	RoutingTableSize int
 }

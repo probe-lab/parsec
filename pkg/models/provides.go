@@ -24,11 +24,12 @@ import (
 
 // Provide is an object representing the database table.
 type Provide struct {
-	ID        int          `boil:"id" json:"id" toml:"id" yaml:"id"`
-	NodeID    int          `boil:"node_id" json:"node_id" toml:"node_id" yaml:"node_id"`
-	Duration  null.Float64 `boil:"duration" json:"duration,omitempty" toml:"duration" yaml:"duration,omitempty"`
-	Error     null.String  `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
-	CreatedAt time.Time    `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	ID        int         `boil:"id" json:"id" toml:"id" yaml:"id"`
+	NodeID    int         `boil:"node_id" json:"node_id" toml:"node_id" yaml:"node_id"`
+	RTSize    int         `boil:"rt_size" json:"rt_size" toml:"rt_size" yaml:"rt_size"`
+	Duration  float64     `boil:"duration" json:"duration" toml:"duration" yaml:"duration"`
+	Error     null.String `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
+	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *provideR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L provideL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -37,12 +38,14 @@ type Provide struct {
 var ProvideColumns = struct {
 	ID        string
 	NodeID    string
+	RTSize    string
 	Duration  string
 	Error     string
 	CreatedAt string
 }{
 	ID:        "id",
 	NodeID:    "node_id",
+	RTSize:    "rt_size",
 	Duration:  "duration",
 	Error:     "error",
 	CreatedAt: "created_at",
@@ -51,12 +54,14 @@ var ProvideColumns = struct {
 var ProvideTableColumns = struct {
 	ID        string
 	NodeID    string
+	RTSize    string
 	Duration  string
 	Error     string
 	CreatedAt string
 }{
 	ID:        "provides.id",
 	NodeID:    "provides.node_id",
+	RTSize:    "provides.rt_size",
 	Duration:  "provides.duration",
 	Error:     "provides.error",
 	CreatedAt: "provides.created_at",
@@ -64,43 +69,34 @@ var ProvideTableColumns = struct {
 
 // Generated where
 
-type whereHelpernull_Float64 struct{ field string }
+type whereHelperfloat64 struct{ field string }
 
-func (w whereHelpernull_Float64) EQ(x null.Float64) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
+func (w whereHelperfloat64) EQ(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperfloat64) NEQ(x float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
 }
-func (w whereHelpernull_Float64) NEQ(x null.Float64) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_Float64) LT(x null.Float64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_Float64) LTE(x null.Float64) qm.QueryMod {
+func (w whereHelperfloat64) LT(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperfloat64) LTE(x float64) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LTE, x)
 }
-func (w whereHelpernull_Float64) GT(x null.Float64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_Float64) GTE(x null.Float64) qm.QueryMod {
+func (w whereHelperfloat64) GT(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperfloat64) GTE(x float64) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
-func (w whereHelpernull_Float64) IN(slice []float64) qm.QueryMod {
+func (w whereHelperfloat64) IN(slice []float64) qm.QueryMod {
 	values := make([]interface{}, 0, len(slice))
 	for _, value := range slice {
 		values = append(values, value)
 	}
 	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
 }
-func (w whereHelpernull_Float64) NIN(slice []float64) qm.QueryMod {
+func (w whereHelperfloat64) NIN(slice []float64) qm.QueryMod {
 	values := make([]interface{}, 0, len(slice))
 	for _, value := range slice {
 		values = append(values, value)
 	}
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
-
-func (w whereHelpernull_Float64) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Float64) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
 type whereHelpernull_String struct{ field string }
 
@@ -143,13 +139,15 @@ func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereI
 var ProvideWhere = struct {
 	ID        whereHelperint
 	NodeID    whereHelperint
-	Duration  whereHelpernull_Float64
+	RTSize    whereHelperint
+	Duration  whereHelperfloat64
 	Error     whereHelpernull_String
 	CreatedAt whereHelpertime_Time
 }{
 	ID:        whereHelperint{field: "\"provides\".\"id\""},
 	NodeID:    whereHelperint{field: "\"provides\".\"node_id\""},
-	Duration:  whereHelpernull_Float64{field: "\"provides\".\"duration\""},
+	RTSize:    whereHelperint{field: "\"provides\".\"rt_size\""},
+	Duration:  whereHelperfloat64{field: "\"provides\".\"duration\""},
 	Error:     whereHelpernull_String{field: "\"provides\".\"error\""},
 	CreatedAt: whereHelpertime_Time{field: "\"provides\".\"created_at\""},
 }
@@ -182,9 +180,9 @@ func (r *provideR) GetNode() *Node {
 type provideL struct{}
 
 var (
-	provideAllColumns            = []string{"id", "node_id", "duration", "error", "created_at"}
-	provideColumnsWithoutDefault = []string{"node_id", "created_at"}
-	provideColumnsWithDefault    = []string{"id", "duration", "error"}
+	provideAllColumns            = []string{"id", "node_id", "rt_size", "duration", "error", "created_at"}
+	provideColumnsWithoutDefault = []string{"node_id", "rt_size", "duration", "created_at"}
+	provideColumnsWithDefault    = []string{"id", "error"}
 	providePrimaryKeyColumns     = []string{"id"}
 	provideGeneratedColumns      = []string{"id"}
 )

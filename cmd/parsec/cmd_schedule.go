@@ -3,12 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/dennis-tra/parsec/pkg/models"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/sync/errgroup"
@@ -95,59 +93,44 @@ var ScheduleCommand = &cli.Command{
 func ScheduleAction(c *cli.Context, nodes []*parsec.Node) error {
 	log.Infoln("Starting Parsec scheduler...")
 
+	defer Cleanup(nodes)
+
 	conf := config.DefaultScheduleConfig.Apply(c)
 
 	// Acquire database handle
-	var (
-		dbc *db.DBClient
-		err error
-	)
-	if !c.Bool("dry-run") {
+	var dbc db.Client
+	var err error
+	if c.Bool("dry-run") {
+		dbc = db.NewDummyClient()
+	} else {
 		if dbc, err = db.InitDBClient(c.Context, conf.DatabaseHost, conf.DatabasePort, conf.DatabaseName, conf.DatabaseUser, conf.DatabasePassword, conf.DatabaseSSLMode); err != nil {
 			return fmt.Errorf("init db client: %w", err)
 		}
 	}
-	bi, ok := debug.ReadBuildInfo()
-	if !ok {
-		return fmt.Errorf("read build info: %w", err)
-	}
 
-	var dbRun *models.Run
-	if dbc != nil {
-		dbRun, err = dbc.InitRun(c.Context, bi)
-		if err != nil {
-			return fmt.Errorf("init run: %w", err)
-		}
+	dbRun, err := dbc.InsertRun(c.Context)
+	if err != nil {
+		return fmt.Errorf("init run: %w", err)
 	}
 
 	log.Infoln("Waiting for parsec node APIs to become available...")
 
-	dbNodesLk := sync.RWMutex{}
-	dbNodes := make([]*models.Node, len(nodes))
-
-	errCtx, cancel := context.WithTimeout(c.Context, 20*time.Minute)
+	errCtx, cancel := context.WithTimeout(c.Context, 5*time.Minute)
 	errg, errCtx := errgroup.WithContext(errCtx)
-	for i, n := range nodes {
-		n2 := n
-		i2 := i
+	for _, node := range nodes {
+		node := node
 		errg.Go(func() error {
-			info, err := n2.WaitForAPI(errCtx)
+			info, err := node.WaitForAPI(errCtx)
 			if err != nil {
 				return err
 			}
 
-			if dbc == nil {
-				return nil
-			}
-
-			dbNode, err := dbc.InsertNode(errCtx, dbRun.ID, info.PeerID, n2.Cluster().Region, n2.Cluster().InstanceType, info.BuildInfo)
+			dbNode, err := dbc.InsertNode(errCtx, dbRun.ID, info.PeerID, node.Cluster().Region, node.Cluster().InstanceType, info.BuildInfo)
 			if err != nil {
 				return fmt.Errorf("insert db node: %w", err)
 			}
 
-			dbNodesLk.Lock()
-			dbNodes[i2] = dbNode
-			dbNodesLk.Unlock()
+			node.Assign(dbNode)
 
 			return nil
 		})
@@ -159,7 +142,7 @@ func ScheduleAction(c *cli.Context, nodes []*parsec.Node) error {
 	cancel()
 
 	// The node index that is currently providing
-	provNode := 0
+	provNodeIdx := 0
 	for {
 		select {
 		case <-c.Context.Done():
@@ -167,43 +150,39 @@ func ScheduleAction(c *cli.Context, nodes []*parsec.Node) error {
 		default:
 		}
 
+		providerNode := nodes[provNodeIdx]
+
 		content, err := util.NewRandomContent()
 		if err != nil {
 			return fmt.Errorf("new random content: %w", err)
 		}
 
-		provide, err := nodes[provNode].Provide(c.Context, content)
+		provide, err := providerNode.Provide(c.Context, content)
 		if err != nil {
-			log.WithField("nodeID", dbNodes[provNode].ID).WithError(err).Warnln("Failed to provide record")
+			log.WithField("nodeID", providerNode.ID).WithError(err).Warnln("Failed to provide record")
 			return fmt.Errorf("provide content: %w", err)
 		}
 
-		if dbc != nil {
-			if _, err := dbc.InsertProvide(c.Context, dbNodes[provNode].ID, provide); err != nil {
-				return fmt.Errorf("insert provide: %w", err)
-			}
+		if _, err := dbc.InsertProvide(c.Context, providerNode.DatabaseID(), provide); err != nil {
+			return fmt.Errorf("insert provide: %w", err)
 		}
+
+		// let everyone take a breath
+		time.Sleep(10 * time.Second)
 
 		// Loop through remaining nodes (len(nodes) - 1)
 		errg, errCtx := errgroup.WithContext(c.Context)
 		for i := 0; i < len(nodes)-1; i++ {
-			// Start at current provNode + 1 and roll over after len(nodes) was reached
-			retrNode := (provNode + i + 1) % len(nodes)
+			// Start at current provNodeIdx + 1 and roll over after len(nodes) was reached
+			retrievalNode := nodes[(provNodeIdx+1+i)%len(nodes)]
 
 			errg.Go(func() error {
-				node := nodes[retrNode]
-				dbNode := dbNodes[retrNode]
-
-				retrieval, err := node.Retrieve(errCtx, content.CID, 1)
+				retrieval, err := retrievalNode.Retrieve(errCtx, content.CID, 1)
 				if err != nil {
 					return fmt.Errorf("api retrieve: %w", err)
 				}
 
-				if dbc == nil {
-					return nil
-				}
-
-				if _, err := dbc.InsertRetrieval(errCtx, dbNode.ID, retrieval); err != nil {
+				if _, err := dbc.InsertRetrieval(errCtx, retrievalNode.DatabaseID(), retrieval); err != nil {
 					return fmt.Errorf("insert retrieve: %w", err)
 				}
 
@@ -214,7 +193,22 @@ func ScheduleAction(c *cli.Context, nodes []*parsec.Node) error {
 			return fmt.Errorf("waitgroup retrieve: %w", err)
 		}
 
-		provNode += 1
-		provNode %= len(nodes)
+		provNodeIdx += 1
+		provNodeIdx %= len(nodes)
 	}
+}
+
+func Cleanup(nodes []*parsec.Node) {
+	var wg sync.WaitGroup
+	for _, node := range nodes {
+		wg.Add(1)
+		node := node
+		go func() {
+			defer wg.Done()
+			if err := node.Cluster().Cleanup(); err != nil {
+				log.WithField("nodeID", node.ID()).Warnln("Error cleaning up cluster")
+			}
+		}()
+	}
+	wg.Wait()
 }
