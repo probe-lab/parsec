@@ -9,6 +9,7 @@ import (
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/routing"
+	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,8 +33,15 @@ func New(ctx context.Context, port int) (*Host, error) {
 		fmt.Sprintf("/ip6/::/udp/%d/quic-v1/webtransport", port),
 	}
 
+	limiter := rcmgr.NewFixedLimiter(rcmgr.InfiniteLimits)
+	rm, err := rcmgr.NewResourceManager(limiter)
+	if err != nil {
+		return nil, errors.Wrap(err, "new resource manager")
+	}
+
 	var dht *kaddht.IpfsDHT
 	h, err := libp2p.New(
+		libp2p.ResourceManager(rm),
 		libp2p.ListenAddrStrings(addrs...),
 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 			var err error
