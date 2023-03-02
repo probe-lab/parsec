@@ -7,7 +7,6 @@ require (
 	github.com/aws/aws-sdk-go v1.36.30
 	github.com/friendsofgo/errors v0.9.2
 	github.com/golang-migrate/migrate/v4 v4.15.2
-	github.com/google/uuid v1.3.0
 	github.com/guseggert/clustertest v0.0.0-20230209223942-5fb8ce33d7b4
 	github.com/ipfs/go-cid v0.3.2
 	github.com/ipfs/go-ipfs-util v0.0.2
@@ -16,7 +15,6 @@ require (
 	github.com/libp2p/go-libp2p v0.25.1
 	github.com/libp2p/go-libp2p-kad-dht v0.21.1
 	github.com/libp2p/go-libp2p-kbucket v0.5.0
-	github.com/multiformats/go-multiaddr v0.8.0
 	github.com/multiformats/go-multihash v0.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
@@ -55,6 +53,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20221203041831-ce31453925ec // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -93,6 +92,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-base32 v0.1.0 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
+	github.com/multiformats/go-multiaddr v0.8.0 // indirect
 	github.com/multiformats/go-multiaddr-dns v0.3.1 // indirect
 	github.com/multiformats/go-multiaddr-fmt v0.1.0 // indirect
 	github.com/multiformats/go-multibase v0.1.1 // indirect
@@ -145,5 +145,4 @@ require (
 replace (
 	github.com/guseggert/clustertest v0.0.0-20230209223942-5fb8ce33d7b4 => github.com/dennis-tra/clustertest v0.0.0-20230216074629-ad6bc680a355
 	github.com/guseggert/clustertest-kubo v0.0.0-20230208164737-508b73711d48 => github.com/dennis-tra/clustertest-kubo v0.0.0-20230217091823-743f20088637
-	github.com/libp2p/go-libp2p-kad-dht v0.21.1 => github.com/dennis-tra/go-libp2p-kad-dht v0.21.1-0.20230222194541-1f884cdd5d7b
 )

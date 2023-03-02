@@ -24,7 +24,16 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 
 	"github.com/dennis-tra/parsec/pkg/models"
+	"github.com/dennis-tra/parsec/pkg/parsec"
 )
+
+type Client interface {
+	InsertRun(ctx context.Context) (*models.Run, error)
+	InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, region string, it string, bi *debug.BuildInfo) (*models.Node, error)
+	InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *parsec.RetrievalResponse) (*models.Retrieval, error)
+	InsertProvide(ctx context.Context, dbNodeID int, provide *parsec.ProvideResponse) (*models.Provide, error)
+	Close() error
+}
 
 //go:embed migrations
 var migrations embed.FS
@@ -36,7 +45,7 @@ type DBClient struct {
 
 // InitDBClient establishes a database connection with the provided configuration and applies any pending
 // migrations
-func InitDBClient(ctx context.Context, host string, port int, name string, user string, password string, ssl string) (*DBClient, error) {
+func InitDBClient(ctx context.Context, host string, port int, name string, user string, password string, ssl string) (Client, error) {
 	log.WithFields(log.Fields{
 		"host": host,
 		"port": port,
@@ -69,10 +78,6 @@ func InitDBClient(ctx context.Context, host string, port int, name string, user 
 	client := &DBClient{handle: db}
 
 	return client, client.applyMigrations(db, name)
-}
-
-func (c *DBClient) Handle() *sql.DB {
-	return c.handle
 }
 
 func (c *DBClient) Close() error {
@@ -126,7 +131,12 @@ func (c *DBClient) applyMigrations(db *sql.DB, name string) error {
 	return nil
 }
 
-func (c *DBClient) InitRun(ctx context.Context, bi *debug.BuildInfo) (*models.Run, error) {
+func (c *DBClient) InsertRun(ctx context.Context) (*models.Run, error) {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return nil, fmt.Errorf("read build info")
+	}
+
 	biData, err := json.Marshal(bi)
 	if err != nil {
 		return nil, fmt.Errorf("marshal build info data: %w", err)
@@ -157,12 +167,50 @@ func (c *DBClient) InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, 
 	return n, n.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) InsertMeasurement(ctx context.Context, dbNodeID int, metric string, value float64) (*models.Measurement, error) {
-	m := &models.Measurement{
-		NodeID: dbNodeID,
-		Metric: metric,
-		Value:  null.Float64From(value),
+func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *parsec.RetrievalResponse) (*models.Retrieval, error) {
+	r := &models.Retrieval{
+		NodeID:   dbNodeID,
+		Duration: retrieval.Duration.Seconds(),
+		RTSize:   retrieval.RoutingTableSize,
+		Error:    null.NewString(retrieval.Error, retrieval.Error != ""),
 	}
 
-	return m, m.Insert(ctx, c.handle, boil.Infer())
+	return r, r.Insert(ctx, c.handle, boil.Infer())
+}
+
+func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, provide *parsec.ProvideResponse) (*models.Provide, error) {
+	p := &models.Provide{
+		NodeID:   dbNodeID,
+		Duration: provide.Duration.Seconds(),
+		RTSize:   provide.RoutingTableSize,
+		Error:    null.NewString(provide.Error, provide.Error != ""),
+	}
+
+	return p, p.Insert(ctx, c.handle, boil.Infer())
+}
+
+type DummyClient struct{}
+
+func NewDummyClient() Client {
+	return &DummyClient{}
+}
+
+func (d *DummyClient) InsertRun(ctx context.Context) (*models.Run, error) {
+	return &models.Run{ID: 1}, nil
+}
+
+func (d *DummyClient) InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, region string, it string, bi *debug.BuildInfo) (*models.Node, error) {
+	return &models.Node{RunID: dbRunID, Region: region, InstanceType: it, PeerID: peerID.String()}, nil
+}
+
+func (d *DummyClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *parsec.RetrievalResponse) (*models.Retrieval, error) {
+	return &models.Retrieval{NodeID: dbNodeID}, nil
+}
+
+func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, provide *parsec.ProvideResponse) (*models.Provide, error) {
+	return &models.Provide{NodeID: dbNodeID}, nil
+}
+
+func (d *DummyClient) Close() error {
+	return nil
 }

@@ -10,25 +10,27 @@ import (
 	"os"
 	"time"
 
-	"github.com/dennis-tra/parsec/pkg/util"
 	"github.com/guseggert/clustertest/cluster"
 	"github.com/guseggert/clustertest/cluster/basic"
 	"github.com/ipfs/go-cid"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/dennis-tra/parsec/pkg/models"
+	"github.com/dennis-tra/parsec/pkg/util"
 )
 
 type Node struct {
 	*basic.Node
 
-	id          string
-	ctx         context.Context
-	client      http.Client
-	host        string
-	port        int
-	fmt         log.Formatter
-	done        chan struct{}
-	cluster     *Cluster
-	onlineSince time.Time
+	id      string
+	ctx     context.Context
+	client  http.Client
+	host    string
+	port    int
+	fmt     log.Formatter
+	done    chan struct{}
+	cluster *Cluster
+	dbNode  *models.Node
 }
 
 func NewNode(c *Cluster, n *basic.Node, id string, host string, port int) (*Node, error) {
@@ -123,7 +125,6 @@ func (n *Node) WaitForAPI(ctx context.Context) (*InfoResponse, error) {
 			log.WithField("node", n.id).Infoln("Check API availability...")
 			info, err := n.Info(ctx)
 			if err == nil {
-				n.onlineSince = time.Now()
 				return info, nil
 			}
 			t.Reset(tick)
@@ -167,9 +168,7 @@ func (n *Node) Info(ctx context.Context) (*InfoResponse, error) {
 }
 
 func (n *Node) Retrieve(ctx context.Context, c cid.Cid, count int) (*RetrievalResponse, error) {
-	rr := &RetrieveRequest{
-		Count: 1,
-	}
+	rr := &RetrieveRequest{}
 
 	data, err := json.Marshal(rr)
 	if err != nil {
@@ -238,6 +237,17 @@ func (n *Node) Provide(ctx context.Context, c *util.Content) (*ProvideResponse, 
 	return &provide, nil
 }
 
+func (n *Node) Assign(dbNode *models.Node) {
+	n.dbNode = dbNode
+}
+
+func (n *Node) DatabaseID() int {
+	if n.dbNode != nil {
+		return n.dbNode.ID
+	}
+	return 0
+}
+
 func (n *Node) Format(entry *log.Entry) ([]byte, error) {
 	logMsg := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(entry.Message), &logMsg); err != nil {
@@ -261,7 +271,7 @@ func (n *Node) Format(entry *log.Entry) ([]byte, error) {
 			}
 			entry.Level = l
 		default:
-			if k == "error" && v.(string) == "<nil>" {
+			if k == "error" && v != nil && v.(string) == "<nil>" {
 				continue
 			}
 			entry.Data[k] = v

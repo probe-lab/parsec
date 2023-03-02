@@ -40,26 +40,6 @@ func NewServer(serverHost string, serverPort int, peerPort int) (*Server, error)
 	}
 
 	log.Infoln("Bootstrapping DHT...")
-	//
-	//bps := []peer.AddrInfo{}
-	//for _, s := range []string{
-	//	//"/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-	//	//"/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
-	//	//"/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-	//	//"/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
-	//	"/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ", // mars.i.ipfs.io
-	//} {
-	//	ma, err := multiaddr.NewMultiaddr(s)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	pi, err := peer.AddrInfoFromP2pAddr(ma)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	bps = append(bps, *pi)
-	//}
-
 	for _, bp := range kaddht.GetDefaultBootstrapPeerAddrInfos() {
 		log.WithField("peerID", util.FmtPeerID(bp.ID)).Infoln("Connecting to bootstrap peer...")
 		if err = parsecHost.Connect(ctx, bp); err != nil {

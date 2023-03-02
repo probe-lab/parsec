@@ -74,6 +74,52 @@ var NodeTableColumns = struct {
 
 // Generated where
 
+type whereHelperint struct{ field string }
+
+func (w whereHelperint) EQ(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint) NEQ(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint) LT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint) LTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint) GT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint) GTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint) IN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperint) NIN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+type whereHelperstring struct{ field string }
+
+func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperstring) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
 type whereHelpertypes_JSON struct{ field string }
 
 func (w whereHelpertypes_JSON) EQ(x types.JSON) qm.QueryMod {
@@ -92,6 +138,27 @@ func (w whereHelpertypes_JSON) GT(x types.JSON) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GT, x)
 }
 func (w whereHelpertypes_JSON) GTE(x types.JSON) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+type whereHelpertime_Time struct{ field string }
+
+func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
@@ -115,17 +182,20 @@ var NodeWhere = struct {
 
 // NodeRels is where relationship names are stored.
 var NodeRels = struct {
-	Run          string
-	Measurements string
+	Run        string
+	Provides   string
+	Retrievals string
 }{
-	Run:          "Run",
-	Measurements: "Measurements",
+	Run:        "Run",
+	Provides:   "Provides",
+	Retrievals: "Retrievals",
 }
 
 // nodeR is where relationships are stored.
 type nodeR struct {
-	Run          *Run             `boil:"Run" json:"Run" toml:"Run" yaml:"Run"`
-	Measurements MeasurementSlice `boil:"Measurements" json:"Measurements" toml:"Measurements" yaml:"Measurements"`
+	Run        *Run           `boil:"Run" json:"Run" toml:"Run" yaml:"Run"`
+	Provides   ProvideSlice   `boil:"Provides" json:"Provides" toml:"Provides" yaml:"Provides"`
+	Retrievals RetrievalSlice `boil:"Retrievals" json:"Retrievals" toml:"Retrievals" yaml:"Retrievals"`
 }
 
 // NewStruct creates a new relationship struct
@@ -140,11 +210,18 @@ func (r *nodeR) GetRun() *Run {
 	return r.Run
 }
 
-func (r *nodeR) GetMeasurements() MeasurementSlice {
+func (r *nodeR) GetProvides() ProvideSlice {
 	if r == nil {
 		return nil
 	}
-	return r.Measurements
+	return r.Provides
+}
+
+func (r *nodeR) GetRetrievals() RetrievalSlice {
+	if r == nil {
+		return nil
+	}
+	return r.Retrievals
 }
 
 // nodeL is where Load methods for each relationship are stored.
@@ -447,18 +524,32 @@ func (o *Node) Run(mods ...qm.QueryMod) runQuery {
 	return Runs(queryMods...)
 }
 
-// Measurements retrieves all the measurement's Measurements with an executor.
-func (o *Node) Measurements(mods ...qm.QueryMod) measurementQuery {
+// Provides retrieves all the provide's Provides with an executor.
+func (o *Node) Provides(mods ...qm.QueryMod) provideQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
 	}
 
 	queryMods = append(queryMods,
-		qm.Where("\"measurements\".\"node_id\"=?", o.ID),
+		qm.Where("\"provides\".\"node_id\"=?", o.ID),
 	)
 
-	return Measurements(queryMods...)
+	return Provides(queryMods...)
+}
+
+// Retrievals retrieves all the retrieval's Retrievals with an executor.
+func (o *Node) Retrievals(mods ...qm.QueryMod) retrievalQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"retrievals\".\"node_id\"=?", o.ID),
+	)
+
+	return Retrievals(queryMods...)
 }
 
 // LoadRun allows an eager lookup of values, cached into the
@@ -581,9 +672,9 @@ func (nodeL) LoadRun(ctx context.Context, e boil.ContextExecutor, singular bool,
 	return nil
 }
 
-// LoadMeasurements allows an eager lookup of values, cached into the
+// LoadProvides allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (nodeL) LoadMeasurements(ctx context.Context, e boil.ContextExecutor, singular bool, maybeNode interface{}, mods queries.Applicator) error {
+func (nodeL) LoadProvides(ctx context.Context, e boil.ContextExecutor, singular bool, maybeNode interface{}, mods queries.Applicator) error {
 	var slice []*Node
 	var object *Node
 
@@ -637,8 +728,8 @@ func (nodeL) LoadMeasurements(ctx context.Context, e boil.ContextExecutor, singu
 	}
 
 	query := NewQuery(
-		qm.From(`measurements`),
-		qm.WhereIn(`measurements.node_id in ?`, args...),
+		qm.From(`provides`),
+		qm.WhereIn(`provides.node_id in ?`, args...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -646,22 +737,22 @@ func (nodeL) LoadMeasurements(ctx context.Context, e boil.ContextExecutor, singu
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load measurements")
+		return errors.Wrap(err, "failed to eager load provides")
 	}
 
-	var resultSlice []*Measurement
+	var resultSlice []*Provide
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice measurements")
+		return errors.Wrap(err, "failed to bind eager loaded slice provides")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on measurements")
+		return errors.Wrap(err, "failed to close results in eager load on provides")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for measurements")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for provides")
 	}
 
-	if len(measurementAfterSelectHooks) != 0 {
+	if len(provideAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -669,10 +760,10 @@ func (nodeL) LoadMeasurements(ctx context.Context, e boil.ContextExecutor, singu
 		}
 	}
 	if singular {
-		object.R.Measurements = resultSlice
+		object.R.Provides = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
-				foreign.R = &measurementR{}
+				foreign.R = &provideR{}
 			}
 			foreign.R.Node = object
 		}
@@ -682,9 +773,123 @@ func (nodeL) LoadMeasurements(ctx context.Context, e boil.ContextExecutor, singu
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
 			if local.ID == foreign.NodeID {
-				local.R.Measurements = append(local.R.Measurements, foreign)
+				local.R.Provides = append(local.R.Provides, foreign)
 				if foreign.R == nil {
-					foreign.R = &measurementR{}
+					foreign.R = &provideR{}
+				}
+				foreign.R.Node = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadRetrievals allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (nodeL) LoadRetrievals(ctx context.Context, e boil.ContextExecutor, singular bool, maybeNode interface{}, mods queries.Applicator) error {
+	var slice []*Node
+	var object *Node
+
+	if singular {
+		var ok bool
+		object, ok = maybeNode.(*Node)
+		if !ok {
+			object = new(Node)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeNode)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeNode))
+			}
+		}
+	} else {
+		s, ok := maybeNode.(*[]*Node)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeNode)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeNode))
+			}
+		}
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &nodeR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &nodeR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`retrievals`),
+		qm.WhereIn(`retrievals.node_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load retrievals")
+	}
+
+	var resultSlice []*Retrieval
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice retrievals")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on retrievals")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for retrievals")
+	}
+
+	if len(retrievalAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.Retrievals = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &retrievalR{}
+			}
+			foreign.R.Node = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.NodeID {
+				local.R.Retrievals = append(local.R.Retrievals, foreign)
+				if foreign.R == nil {
+					foreign.R = &retrievalR{}
 				}
 				foreign.R.Node = local
 				break
@@ -742,11 +947,11 @@ func (o *Node) SetRun(ctx context.Context, exec boil.ContextExecutor, insert boo
 	return nil
 }
 
-// AddMeasurements adds the given related objects to the existing relationships
+// AddProvides adds the given related objects to the existing relationships
 // of the node, optionally inserting them as new records.
-// Appends related to o.R.Measurements.
+// Appends related to o.R.Provides.
 // Sets related.R.Node appropriately.
-func (o *Node) AddMeasurements(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Measurement) error {
+func (o *Node) AddProvides(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Provide) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -756,9 +961,9 @@ func (o *Node) AddMeasurements(ctx context.Context, exec boil.ContextExecutor, i
 			}
 		} else {
 			updateQuery := fmt.Sprintf(
-				"UPDATE \"measurements\" SET %s WHERE %s",
+				"UPDATE \"provides\" SET %s WHERE %s",
 				strmangle.SetParamNames("\"", "\"", 1, []string{"node_id"}),
-				strmangle.WhereClause("\"", "\"", 2, measurementPrimaryKeyColumns),
+				strmangle.WhereClause("\"", "\"", 2, providePrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -777,15 +982,68 @@ func (o *Node) AddMeasurements(ctx context.Context, exec boil.ContextExecutor, i
 
 	if o.R == nil {
 		o.R = &nodeR{
-			Measurements: related,
+			Provides: related,
 		}
 	} else {
-		o.R.Measurements = append(o.R.Measurements, related...)
+		o.R.Provides = append(o.R.Provides, related...)
 	}
 
 	for _, rel := range related {
 		if rel.R == nil {
-			rel.R = &measurementR{
+			rel.R = &provideR{
+				Node: o,
+			}
+		} else {
+			rel.R.Node = o
+		}
+	}
+	return nil
+}
+
+// AddRetrievals adds the given related objects to the existing relationships
+// of the node, optionally inserting them as new records.
+// Appends related to o.R.Retrievals.
+// Sets related.R.Node appropriately.
+func (o *Node) AddRetrievals(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Retrieval) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.NodeID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"retrievals\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"node_id"}),
+				strmangle.WhereClause("\"", "\"", 2, retrievalPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.NodeID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &nodeR{
+			Retrievals: related,
+		}
+	} else {
+		o.R.Retrievals = append(o.R.Retrievals, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &retrievalR{
 				Node: o,
 			}
 		} else {

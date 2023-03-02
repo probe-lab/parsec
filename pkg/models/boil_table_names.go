@@ -4,11 +4,13 @@
 package models
 
 var TableNames = struct {
-	Measurements string
-	Nodes        string
-	Runs         string
+	Nodes      string
+	Provides   string
+	Retrievals string
+	Runs       string
 }{
-	Measurements: "measurements",
-	Nodes:        "nodes",
-	Runs:         "runs",
+	Nodes:      "nodes",
+	Provides:   "provides",
+	Retrievals: "retrievals",
+	Runs:       "runs",
 }

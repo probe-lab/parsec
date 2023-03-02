@@ -1,22 +1,22 @@
 BEGIN;
 
-CREATE TABLE measurements
+CREATE TABLE retrievals
 (
     id         INT GENERATED ALWAYS AS IDENTITY,
     node_id    INT         NOT NULL,
-    metric     TEXT        NOT NULL,
-    value      FLOAT,
+    rt_size    INT         NOT NULL,
+    duration   FLOAT       NOT NULL,
     error      TEXT,
     created_at TIMESTAMPTZ NOT NULL,
 
-    CONSTRAINT fk_measurements_node
+    CONSTRAINT fk_retrievals_node
         FOREIGN KEY (node_id)
             REFERENCES nodes (id),
 
     PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_measurements_created_at ON measurements (created_at);
+CREATE INDEX idx_retrievals_created_at ON retrievals (created_at);
 
 COMMIT;
 
