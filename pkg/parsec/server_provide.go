@@ -1,6 +1,7 @@
 package parsec
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -40,9 +41,13 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 	}
 
 	log.WithField("cid", content.CID.String()).Infoln("Start providing content...")
+	timeoutCtx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
+	defer cancel()
+
 	start := time.Now()
-	err = s.host.DHT.Provide(r.Context(), content.CID, true)
+	err = s.host.DHT.Provide(timeoutCtx, content.CID, true)
 	end := time.Now()
+
 	log.WithField("cid", content.CID.String()).Infoln("Done providing content...")
 
 	resp := ProvideResponse{
