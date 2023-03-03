@@ -3,7 +3,6 @@ package dht
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
@@ -16,9 +15,7 @@ import (
 
 type Host struct {
 	host.Host
-
-	DHT       *kaddht.IpfsDHT
-	StartedAt *time.Time
+	DHT *kaddht.IpfsDHT
 }
 
 func New(ctx context.Context, port int) (*Host, error) {
@@ -53,11 +50,9 @@ func New(ctx context.Context, port int) (*Host, error) {
 		return nil, errors.Wrap(err, "new libp2p host")
 	}
 
-	now := time.Now()
 	newHost := &Host{
-		Host:      h,
-		DHT:       dht,
-		StartedAt: &now,
+		Host: h,
+		DHT:  dht,
 	}
 
 	log.WithField("localID", h.ID()).Info("Initialized new libp2p host")
