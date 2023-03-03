@@ -58,6 +58,7 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	} else {
 		s.host.Network().ClosePeer(provider.ID)
 		s.host.Peerstore().RemovePeer(provider.ID)
+		s.host.Peerstore().ClearAddrs(provider.ID)
 		logEntry.WithField("provider", util.FmtPeerID(provider.ID)).Infoln("Found provider")
 	}
 

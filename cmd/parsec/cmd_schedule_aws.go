@@ -38,6 +38,11 @@ var ScheduleAWSCommand = &cli.Command{
 			EnvVars: []string{"PARSEC_SCHEDULE_AWS_INSTANCE_TYPE"},
 		},
 		&cli.StringSliceFlag{
+			Name:    "key-names",
+			Usage:   "the SSH key pair names in each region",
+			EnvVars: []string{"PARSEC_SCHEDULE_AWS_KEY_NAMES"},
+		},
+		&cli.StringSliceFlag{
 			Name:    "public-subnet-ids",
 			Usage:   "The public subnet IDs to run the cluster in",
 			EnvVars: []string{"PARSEC_SCHEDULE_AWS_PUBLIC_SUBNET_IDS"},
@@ -82,7 +87,8 @@ func ScheduleAWSAction(c *cli.Context) error {
 				WithInstanceProfileARN(conf.InstanceProfileARNs[i]).
 				WithInstanceSecurityGroupID(conf.InstanceSecurityGroupIDs[i]).
 				WithS3BucketARN(conf.S3BucketARNs[i]).
-				WithInstanceType(conf.InstanceType)
+				WithInstanceType(conf.InstanceType).
+				WithKeyName(conf.KeyNames[i])
 
 			pc := parsec.NewCluster(basic.New(cl).Context(c.Context), region, conf.InstanceType, conf.ServerHost, conf.ServerPort)
 

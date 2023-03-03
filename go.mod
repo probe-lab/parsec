@@ -149,6 +149,6 @@ require (
 )
 
 replace (
-	github.com/guseggert/clustertest v0.0.0-20230209223942-5fb8ce33d7b4 => github.com/dennis-tra/clustertest v0.0.0-20230216074629-ad6bc680a355
+	github.com/guseggert/clustertest v0.0.0-20230209223942-5fb8ce33d7b4 => github.com/dennis-tra/clustertest v0.0.0-20230303120803-d6b0727f215d
 	github.com/guseggert/clustertest-kubo v0.0.0-20230208164737-508b73711d48 => github.com/dennis-tra/clustertest-kubo v0.0.0-20230217091823-743f20088637
 )

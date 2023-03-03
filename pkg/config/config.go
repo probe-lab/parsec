@@ -163,6 +163,7 @@ type ScheduleAWSConfig struct {
 	ScheduleConfig
 	NodeAgent                string
 	InstanceType             string
+	KeyNames                 []string
 	Regions                  []string
 	PublicSubnetIDs          []string
 	InstanceProfileARNs      []arn.ARN
@@ -184,6 +185,9 @@ func (sac ScheduleAWSConfig) Apply(c *cli.Context) (ScheduleAWSConfig, error) {
 	}
 	if c.IsSet("instance-type") {
 		newConfig.InstanceType = c.String("instance-type")
+	}
+	if c.IsSet("key-names") {
+		newConfig.KeyNames = c.StringSlice("key-names")
 	}
 	if c.IsSet("regions") {
 		newConfig.Regions = c.StringSlice("regions")
