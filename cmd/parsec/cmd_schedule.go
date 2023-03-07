@@ -142,14 +142,9 @@ func ScheduleAction(c *cli.Context, nodes []*parsec.Node) error {
 
 	// The node index that is currently providing
 	provNodeIdx := 0
-
-	// TODO: Hack. There's a memory leak. Fix: just stop process after 2.5h so that it gets restarted.
-	tCtx, cancel := context.WithTimeout(c.Context, 150*time.Minute)
-	defer cancel()
-
 	for {
 		select {
-		case <-tCtx.Done():
+		case <-c.Context.Done():
 			return c.Context.Err()
 		default:
 		}
@@ -161,14 +156,14 @@ func ScheduleAction(c *cli.Context, nodes []*parsec.Node) error {
 			return fmt.Errorf("new random content: %w", err)
 		}
 
-		provide, err := providerNode.Provide(tCtx, content)
+		provide, err := providerNode.Provide(c.Context, content)
 		if err != nil {
 
 			log.WithField("nodeID", providerNode.ID).WithError(err).Warnln("Failed to provide record")
 			return fmt.Errorf("provide content: %w", err)
 		}
 
-		if _, err := dbc.InsertProvide(tCtx, providerNode.DatabaseID(), provide); err != nil {
+		if _, err := dbc.InsertProvide(c.Context, providerNode.DatabaseID(), provide); err != nil {
 			return fmt.Errorf("insert provide: %w", err)
 		}
 
@@ -176,7 +171,7 @@ func ScheduleAction(c *cli.Context, nodes []*parsec.Node) error {
 		time.Sleep(10 * time.Second)
 
 		// Loop through remaining nodes (len(nodes) - 1)
-		errg, errCtx := errgroup.WithContext(tCtx)
+		errg, errCtx := errgroup.WithContext(c.Context)
 		for i := 0; i < len(nodes)-1; i++ {
 			// Start at current provNodeIdx + 1 and roll over after len(nodes) was reached
 			retrievalNode := nodes[(provNodeIdx+1+i)%len(nodes)]
