@@ -42,7 +42,7 @@ func New(ctx context.Context, port int) (*Host, error) {
 		libp2p.ListenAddrStrings(addrs...),
 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 			var err error
-			dht, err = kaddht.New(ctx, h)
+			dht, err = kaddht.New(ctx, h, kaddht.Mode(kaddht.ModeClient))
 			return dht, err
 		}),
 	)
