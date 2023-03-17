@@ -1,4 +1,4 @@
-package parsec
+package server
 
 import (
 	"context"

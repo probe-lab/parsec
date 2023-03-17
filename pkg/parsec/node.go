@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/dennis-tra/parsec/pkg/server"
+
 	"github.com/guseggert/clustertest/cluster"
 	"github.com/guseggert/clustertest/cluster/basic"
 	"github.com/ipfs/go-cid"
@@ -116,7 +118,7 @@ func NewNode(c *Cluster, n *basic.Node, id string, host string, port int) (*Node
 	return parsecNode, nil
 }
 
-func (n *Node) WaitForAPI(ctx context.Context) (*InfoResponse, error) {
+func (n *Node) WaitForAPI(ctx context.Context) (*server.InfoResponse, error) {
 	tick := 5 * time.Second
 	t := time.NewTicker(tick)
 	for {
@@ -142,7 +144,7 @@ func (n *Node) Cluster() *Cluster {
 	return n.cluster
 }
 
-func (n *Node) Info(ctx context.Context) (*InfoResponse, error) {
+func (n *Node) Info(ctx context.Context) (*server.InfoResponse, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s:%d/info", n.host, n.port), nil)
 	if err != nil {
 		return nil, fmt.Errorf("create info request: %w", err)
@@ -159,7 +161,7 @@ func (n *Node) Info(ctx context.Context) (*InfoResponse, error) {
 		return nil, fmt.Errorf("read provide response: %w", err)
 	}
 
-	info := InfoResponse{}
+	info := server.InfoResponse{}
 	if err = json.Unmarshal(dat, &info); err != nil {
 		return nil, fmt.Errorf("unmarshal info response: %w", err)
 	}
@@ -167,8 +169,8 @@ func (n *Node) Info(ctx context.Context) (*InfoResponse, error) {
 	return &info, nil
 }
 
-func (n *Node) Retrieve(ctx context.Context, c cid.Cid, count int) (*RetrievalResponse, error) {
-	rr := &RetrieveRequest{}
+func (n *Node) Retrieve(ctx context.Context, c cid.Cid, count int) (*server.RetrievalResponse, error) {
+	rr := &server.RetrieveRequest{}
 
 	data, err := json.Marshal(rr)
 	if err != nil {
@@ -193,7 +195,7 @@ func (n *Node) Retrieve(ctx context.Context, c cid.Cid, count int) (*RetrievalRe
 		return nil, fmt.Errorf("read retrieval response: %w", err)
 	}
 
-	retrieval := RetrievalResponse{}
+	retrieval := server.RetrievalResponse{}
 	if err = json.Unmarshal(dat, &retrieval); err != nil {
 		return nil, fmt.Errorf("unmarshal retrieval response: %w", err)
 	}
@@ -201,8 +203,8 @@ func (n *Node) Retrieve(ctx context.Context, c cid.Cid, count int) (*RetrievalRe
 	return &retrieval, nil
 }
 
-func (n *Node) Provide(ctx context.Context, c *util.Content) (*ProvideResponse, error) {
-	pr := &ProvideRequest{
+func (n *Node) Provide(ctx context.Context, c *util.Content) (*server.ProvideResponse, error) {
+	pr := &server.ProvideRequest{
 		Content: c.Raw,
 	}
 
@@ -229,7 +231,7 @@ func (n *Node) Provide(ctx context.Context, c *util.Content) (*ProvideResponse, 
 		return nil, fmt.Errorf("read provide response: %w", err)
 	}
 
-	provide := ProvideResponse{}
+	provide := server.ProvideResponse{}
 	if err = json.Unmarshal(dat, &provide); err != nil {
 		return nil, fmt.Errorf("unmarshal provide response: %w", err)
 	}

@@ -1,9 +1,6 @@
 package config
 
 import (
-	"fmt"
-
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/urfave/cli/v2"
 )
 
@@ -76,9 +73,8 @@ func (sc ServerConfig) Apply(c *cli.Context) ServerConfig {
 	return newConfig
 }
 
-type ScheduleConfig struct {
+type SchedulerConfig struct {
 	GlobalConfig
-	ServerHost       string
 	ServerPort       int
 	DryRun           bool
 	DatabaseHost     string
@@ -89,9 +85,8 @@ type ScheduleConfig struct {
 	DatabaseSSLMode  string
 }
 
-var DefaultScheduleConfig = ScheduleConfig{
+var DefaultSchedulerConfig = SchedulerConfig{
 	GlobalConfig:     DefaultGlobalConfig,
-	ServerHost:       "localhost",
 	ServerPort:       7070,
 	DatabaseHost:     "localhost",
 	DatabasePort:     5432,
@@ -101,14 +96,11 @@ var DefaultScheduleConfig = ScheduleConfig{
 	DatabaseSSLMode:  "disable",
 }
 
-func (sc ScheduleConfig) Apply(c *cli.Context) ScheduleConfig {
+func (sc SchedulerConfig) Apply(c *cli.Context) SchedulerConfig {
 	newConfig := sc
 
 	newConfig.GlobalConfig = newConfig.GlobalConfig.Apply(c)
 
-	if c.IsSet("server-host") {
-		newConfig.ServerHost = c.String("server-host")
-	}
 	if c.IsSet("server-port") {
 		newConfig.ServerPort = c.Int("server-port")
 	}
@@ -135,90 +127,4 @@ func (sc ScheduleConfig) Apply(c *cli.Context) ScheduleConfig {
 	}
 
 	return newConfig
-}
-
-type ScheduleDockerConfig struct {
-	ScheduleConfig
-	Nodes int
-}
-
-var DefaultScheduleDockerConfig = ScheduleDockerConfig{
-	ScheduleConfig: DefaultScheduleConfig,
-	Nodes:          5,
-}
-
-func (sdc ScheduleDockerConfig) Apply(c *cli.Context) ScheduleDockerConfig {
-	newConfig := sdc
-
-	newConfig.ScheduleConfig = newConfig.ScheduleConfig.Apply(c)
-
-	if c.IsSet("nodes") {
-		newConfig.Nodes = c.Int("nodes")
-	}
-
-	return newConfig
-}
-
-type ScheduleAWSConfig struct {
-	ScheduleConfig
-	NodeAgent                string
-	InstanceType             string
-	KeyNames                 []string
-	Regions                  []string
-	PublicSubnetIDs          []string
-	InstanceProfileARNs      []arn.ARN
-	InstanceSecurityGroupIDs []string
-	S3BucketARNs             []arn.ARN
-}
-
-var DefaultScheduleAWSConfig = ScheduleAWSConfig{
-	ScheduleConfig: DefaultScheduleConfig,
-}
-
-func (sac ScheduleAWSConfig) Apply(c *cli.Context) (ScheduleAWSConfig, error) {
-	newConfig := sac
-
-	newConfig.ScheduleConfig = newConfig.ScheduleConfig.Apply(c)
-
-	if c.IsSet("nodeagent") {
-		newConfig.NodeAgent = c.String("nodeagent")
-	}
-	if c.IsSet("instance-type") {
-		newConfig.InstanceType = c.String("instance-type")
-	}
-	if c.IsSet("key-names") {
-		newConfig.KeyNames = c.StringSlice("key-names")
-	}
-	if c.IsSet("regions") {
-		newConfig.Regions = c.StringSlice("regions")
-	}
-	if c.IsSet("public-subnet-ids") {
-		newConfig.PublicSubnetIDs = c.StringSlice("public-subnet-ids")
-	}
-
-	if c.IsSet("instance-profile-arns") {
-		for _, arnStr := range c.StringSlice("instance-profile-arns") {
-			iparn, err := arn.Parse(arnStr)
-			if err != nil {
-				return ScheduleAWSConfig{}, fmt.Errorf("error parsing instnace profile arn: %w", err)
-			}
-			newConfig.InstanceProfileARNs = append(newConfig.InstanceProfileARNs, iparn)
-		}
-	}
-
-	if c.IsSet("s3-bucket-arns") {
-		for _, arnStr := range c.StringSlice("s3-bucket-arns") {
-			s3arn, err := arn.Parse(arnStr)
-			if err != nil {
-				return ScheduleAWSConfig{}, fmt.Errorf("error parsing s3 bucket arn: %w", err)
-			}
-			newConfig.S3BucketARNs = append(newConfig.S3BucketARNs, s3arn)
-		}
-	}
-
-	if c.IsSet("instance-security-group-ids") {
-		newConfig.InstanceSecurityGroupIDs = c.StringSlice("instance-security-group-ids")
-	}
-
-	return newConfig, nil
 }

@@ -12,6 +12,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/dennis-tra/parsec/pkg/server"
+
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -24,14 +26,13 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 
 	"github.com/dennis-tra/parsec/pkg/models"
-	"github.com/dennis-tra/parsec/pkg/parsec"
 )
 
 type Client interface {
 	InsertRun(ctx context.Context) (*models.Run, error)
 	InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, region string, it string, bi *debug.BuildInfo) (*models.Node, error)
-	InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *parsec.RetrievalResponse) (*models.Retrieval, error)
-	InsertProvide(ctx context.Context, dbNodeID int, provide *parsec.ProvideResponse) (*models.Provide, error)
+	InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *server.RetrievalResponse) (*models.Retrieval, error)
+	InsertProvide(ctx context.Context, dbNodeID int, provide *server.ProvideResponse) (*models.Provide, error)
 	Close() error
 }
 
@@ -167,7 +168,7 @@ func (c *DBClient) InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, 
 	return n, n.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *parsec.RetrievalResponse) (*models.Retrieval, error) {
+func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *server.RetrievalResponse) (*models.Retrieval, error) {
 	r := &models.Retrieval{
 		Cid:      retrieval.CID,
 		NodeID:   dbNodeID,
@@ -179,7 +180,7 @@ func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval 
 	return r, r.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, provide *parsec.ProvideResponse) (*models.Provide, error) {
+func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, provide *server.ProvideResponse) (*models.Provide, error) {
 	p := &models.Provide{
 		Cid:      provide.CID,
 		NodeID:   dbNodeID,
@@ -205,11 +206,11 @@ func (d *DummyClient) InsertNode(ctx context.Context, dbRunID int, peerID peer.I
 	return &models.Node{RunID: dbRunID, Region: region, InstanceType: it, PeerID: peerID.String()}, nil
 }
 
-func (d *DummyClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *parsec.RetrievalResponse) (*models.Retrieval, error) {
+func (d *DummyClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *server.RetrievalResponse) (*models.Retrieval, error) {
 	return &models.Retrieval{NodeID: dbNodeID}, nil
 }
 
-func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, provide *parsec.ProvideResponse) (*models.Provide, error) {
+func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, provide *server.ProvideResponse) (*models.Provide, error) {
 	return &models.Provide{NodeID: dbNodeID}, nil
 }
 

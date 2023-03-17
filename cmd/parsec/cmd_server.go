@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/dennis-tra/parsec/pkg/server"
+
 	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/parsec"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -48,7 +49,7 @@ func ServerAction(c *cli.Context) error {
 
 	conf := config.DefaultServerConfig.Apply(c)
 
-	n, err := parsec.NewServer(conf.ServerHost, conf.ServerPort, conf.PeerPort)
+	n, err := server.NewServer(conf.ServerHost, conf.ServerPort, conf.PeerPort)
 	if err != nil {
 		return fmt.Errorf("new server: %w", err)
 	}

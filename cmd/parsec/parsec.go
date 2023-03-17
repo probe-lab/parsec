@@ -74,7 +74,7 @@ func main() {
 		},
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
-			ScheduleCommand,
+			SchedulerCommand,
 			ServerCommand,
 		},
 	}
