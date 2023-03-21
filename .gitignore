@@ -1,7 +1,7 @@
 nodeagent
-./parsec
+parsec
+!pkg/parsec
 db.toml
-
 *.p
 
 analysis/plots/
