@@ -83,6 +83,13 @@ var ScheduleCommand = &cli.Command{
 			DefaultText: config.DefaultScheduleConfig.DatabaseSSLMode,
 			Value:       config.DefaultScheduleConfig.DatabaseSSLMode,
 		},
+		&cli.BoolFlag{
+			Name:        "fullrt",
+			Usage:       "Whether to enable the full routing table setting on the DHT",
+			EnvVars:     []string{"PARSEC_SCHEDULE_FULLRT"},
+			DefaultText: strconv.FormatBool(config.DefaultScheduleConfig.FullRT),
+			Value:       config.DefaultScheduleConfig.FullRT,
+		},
 	},
 	Subcommands: []*cli.Command{
 		ScheduleDockerCommand,

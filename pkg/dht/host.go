@@ -51,7 +51,7 @@ func New(ctx context.Context, port int, fullRT bool) (*Host, error) {
 					kaddht.Mode(kaddht.ModeClient),
 				))
 			} else {
-				log.Infoln("Using full standard DHT client")
+				log.Infoln("Using standard DHT client")
 				dht, err = kaddht.New(ctx, h, kaddht.Mode(kaddht.ModeClient))
 			}
 			return dht, err

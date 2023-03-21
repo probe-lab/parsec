@@ -89,10 +89,16 @@ func NewNode(c *Cluster, n *basic.Node, id string, host string, port int) (*Node
 	logger.Formatter = parsecNode
 	nodeLogger := logger.WithField("nodeID", id)
 
+	args := []string{"server"}
+	if c.FullRT {
+		logEntry.Infoln("Enabling accelerated DHT")
+		args = append(args, "--fullrt")
+	}
+
 	logEntry.Infoln("Starting parsec server...")
 	proc, err = n.StartProc(cluster.StartProcRequest{
 		Command: "/parsec",
-		Args:    []string{"server"},
+		Args:    args,
 		Stderr:  nodeLogger.Writer(),
 		Stdout:  nodeLogger.Writer(),
 	})

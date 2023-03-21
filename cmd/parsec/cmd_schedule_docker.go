@@ -36,7 +36,7 @@ func ScheduleDockerAction(c *cli.Context) error {
 		return fmt.Errorf("new docker cluster: %w", err)
 	}
 
-	pc := parsec.NewCluster(basic.New(cl).Context(c.Context), "docker", "container", conf.ServerHost, conf.ServerPort)
+	pc := parsec.NewCluster(basic.New(cl).Context(c.Context), "docker", "container", conf.ServerHost, conf.ServerPort, false)
 
 	log.Infoln("Initializing docker nodes")
 	nodes, err := pc.NewNodes(conf.Nodes)

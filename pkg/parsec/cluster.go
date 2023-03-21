@@ -12,15 +12,17 @@ type Cluster struct {
 	InstanceType string
 	ServerHost   string
 	ServerPort   int
+	FullRT       bool
 }
 
-func NewCluster(bc *basic.Cluster, region string, instanceType string, serverHost string, serverPort int) *Cluster {
+func NewCluster(bc *basic.Cluster, region string, instanceType string, serverHost string, serverPort int, fullRT bool) *Cluster {
 	return &Cluster{
 		Cluster:      bc,
 		Region:       region,
 		InstanceType: instanceType,
 		ServerHost:   serverHost,
 		ServerPort:   serverPort,
+		FullRT:       fullRT,
 	}
 }
 

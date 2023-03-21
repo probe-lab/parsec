@@ -91,6 +91,7 @@ type ScheduleConfig struct {
 	DatabasePassword string
 	DatabaseUser     string
 	DatabaseSSLMode  string
+	FullRT           bool
 }
 
 var DefaultScheduleConfig = ScheduleConfig{
@@ -136,6 +137,9 @@ func (sc ScheduleConfig) Apply(c *cli.Context) ScheduleConfig {
 	}
 	if c.IsSet("db-sslmode") {
 		newConfig.DatabaseSSLMode = c.String("db-sslmode")
+	}
+	if c.IsSet("fullrt") {
+		newConfig.FullRT = c.Bool("fullrt")
 	}
 
 	return newConfig

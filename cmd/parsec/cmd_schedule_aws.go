@@ -90,7 +90,7 @@ func ScheduleAWSAction(c *cli.Context) error {
 				WithInstanceType(conf.InstanceType).
 				WithKeyName(conf.KeyNames[i])
 
-			pc := parsec.NewCluster(basic.New(cl).Context(c.Context), region, conf.InstanceType, conf.ServerHost, conf.ServerPort)
+			pc := parsec.NewCluster(basic.New(cl).Context(c.Context), region, conf.InstanceType, conf.ServerHost, conf.ServerPort, conf.FullRT)
 
 			log.Infoln("Initializing aws node")
 			n, err := pc.NewNode(i)
