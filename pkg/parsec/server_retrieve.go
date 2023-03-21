@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dennis-tra/parsec/pkg/dht"
 	"github.com/dennis-tra/parsec/pkg/util"
 )
 
@@ -39,7 +40,7 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 
 	resp := RetrievalResponse{
 		CID:              c.String(),
-		RoutingTableSize: s.host.DHT.RoutingTable().Size(),
+		RoutingTableSize: dht.RoutingTableSize(s.host.DHT),
 	}
 	logEntry := log.WithField("cid", c.String()).WithField("rtSize", resp.RoutingTableSize)
 

@@ -49,6 +49,7 @@ type ServerConfig struct {
 	ServerPort int
 	PeerHost   string
 	PeerPort   int
+	FullRT     bool
 }
 
 var DefaultServerConfig = ServerConfig{
@@ -71,6 +72,9 @@ func (sc ServerConfig) Apply(c *cli.Context) ServerConfig {
 	}
 	if c.IsSet("peer-port") {
 		newConfig.PeerPort = c.Int("peer-port")
+	}
+	if c.IsSet("fullrt") {
+		newConfig.FullRT = c.Bool("fullrt")
 	}
 
 	return newConfig

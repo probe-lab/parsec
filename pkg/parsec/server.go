@@ -30,10 +30,10 @@ type Server struct {
 	host   *dht.Host
 }
 
-func NewServer(serverHost string, serverPort int, peerPort int) (*Server, error) {
+func NewServer(serverHost string, serverPort int, peerPort int, fullRT bool) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	parsecHost, err := dht.New(ctx, peerPort)
+	parsecHost, err := dht.New(ctx, peerPort, fullRT)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("new host: %w", err)
@@ -46,12 +46,6 @@ func NewServer(serverHost string, serverPort int, peerPort int) (*Server, error)
 			log.WithError(err).Warnln("Could not connect to bootstrap peer")
 		}
 	}
-
-	//log.Infoln("Refreshing routing table...")
-	//if err := <-parsecHost.DHT.RefreshRoutingTable(); err != nil {
-	//	log.WithError(err).Warnln("Error refreshing routing table")
-	//}
-	//log.Infoln("Refreshing routing table done!")
 
 	s := &Server{
 		ctx:    ctx,

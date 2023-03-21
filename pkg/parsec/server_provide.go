@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dennis-tra/parsec/pkg/util"
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/dennis-tra/parsec/pkg/dht"
+	"github.com/dennis-tra/parsec/pkg/util"
 )
 
 import (
@@ -53,7 +55,7 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 	resp := ProvideResponse{
 		CID:              content.CID.String(),
 		Duration:         end.Sub(start),
-		RoutingTableSize: s.host.DHT.RoutingTable().Size(),
+		RoutingTableSize: dht.RoutingTableSize(s.host.DHT),
 	}
 
 	if err != nil {
