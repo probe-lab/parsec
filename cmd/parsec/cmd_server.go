@@ -38,6 +38,13 @@ var ServerCommand = &cli.Command{
 			DefaultText: strconv.Itoa(config.DefaultServerConfig.PeerPort),
 			Value:       config.DefaultServerConfig.PeerPort,
 		},
+		&cli.BoolFlag{
+			Name:        "fullrt",
+			Usage:       "Whether to enable the full routing table setting on the DHT",
+			EnvVars:     []string{"PARSEC_SERVER_FULLRT"},
+			DefaultText: strconv.FormatBool(config.DefaultServerConfig.FullRT),
+			Value:       config.DefaultServerConfig.FullRT,
+		},
 	},
 }
 
@@ -49,7 +56,7 @@ func ServerAction(c *cli.Context) error {
 
 	conf := config.DefaultServerConfig.Apply(c)
 
-	n, err := server.NewServer(conf.ServerHost, conf.ServerPort, conf.PeerPort)
+	n, err := server.NewServer(conf.ServerHost, conf.ServerPort, conf.PeerPort, conf.FullRT)
 	if err != nil {
 		return fmt.Errorf("new server: %w", err)
 	}

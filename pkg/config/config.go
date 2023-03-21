@@ -46,6 +46,7 @@ type ServerConfig struct {
 	ServerPort int
 	PeerHost   string
 	PeerPort   int
+	FullRT     bool
 }
 
 var DefaultServerConfig = ServerConfig{
@@ -69,6 +70,9 @@ func (sc ServerConfig) Apply(c *cli.Context) ServerConfig {
 	if c.IsSet("peer-port") {
 		newConfig.PeerPort = c.Int("peer-port")
 	}
+	if c.IsSet("fullrt") {
+		newConfig.FullRT = c.Bool("fullrt")
+	}
 
 	return newConfig
 }
@@ -83,6 +87,7 @@ type SchedulerConfig struct {
 	DatabasePassword string
 	DatabaseUser     string
 	DatabaseSSLMode  string
+	FullRT           bool
 }
 
 var DefaultSchedulerConfig = SchedulerConfig{
@@ -124,6 +129,9 @@ func (sc SchedulerConfig) Apply(c *cli.Context) SchedulerConfig {
 	}
 	if c.IsSet("db-sslmode") {
 		newConfig.DatabaseSSLMode = c.String("db-sslmode")
+	}
+	if c.IsSet("fullrt") {
+		newConfig.FullRT = c.Bool("fullrt")
 	}
 
 	return newConfig
