@@ -46,10 +46,12 @@ func New(ctx context.Context, port int, fullRT bool) (*Host, error) {
 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 			var err error
 			if fullRT {
+				log.Infoln("Using full accelerated DHT client")
 				dht, err = fullrt.NewFullRT(h, ipfsProtocolPrefix, fullrt.DHTOption(
 					kaddht.Mode(kaddht.ModeClient),
 				))
 			} else {
+				log.Infoln("Using full standard DHT client")
 				dht, err = kaddht.New(ctx, h, kaddht.Mode(kaddht.ModeClient))
 			}
 			return dht, err
