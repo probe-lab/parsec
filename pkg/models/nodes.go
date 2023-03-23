@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,52 +25,87 @@ import (
 
 // Node is an object representing the database table.
 type Node struct {
-	ID           int        `boil:"id" json:"id" toml:"id" yaml:"id"`
-	PeerID       string     `boil:"peer_id" json:"peer_id" toml:"peer_id" yaml:"peer_id"`
-	RunID        int        `boil:"run_id" json:"run_id" toml:"run_id" yaml:"run_id"`
-	Region       string     `boil:"region" json:"region" toml:"region" yaml:"region"`
-	InstanceType string     `boil:"instance_type" json:"instance_type" toml:"instance_type" yaml:"instance_type"`
-	Dependencies types.JSON `boil:"dependencies" json:"dependencies" toml:"dependencies" yaml:"dependencies"`
-	CreatedAt    time.Time  `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	ID            int               `boil:"id" json:"id" toml:"id" yaml:"id"`
+	CPU           int               `boil:"cpu" json:"cpu" toml:"cpu" yaml:"cpu"`
+	Memory        int               `boil:"memory" json:"memory" toml:"memory" yaml:"memory"`
+	PeerID        string            `boil:"peer_id" json:"peer_id" toml:"peer_id" yaml:"peer_id"`
+	Region        string            `boil:"region" json:"region" toml:"region" yaml:"region"`
+	CMD           string            `boil:"cmd" json:"cmd" toml:"cmd" yaml:"cmd"`
+	Tags          types.StringArray `boil:"tags" json:"tags" toml:"tags" yaml:"tags"`
+	Dependencies  types.JSON        `boil:"dependencies" json:"dependencies" toml:"dependencies" yaml:"dependencies"`
+	IPAddress     string            `boil:"ip_address" json:"ip_address" toml:"ip_address" yaml:"ip_address"`
+	ServerPort    int16             `boil:"server_port" json:"server_port" toml:"server_port" yaml:"server_port"`
+	PeerPort      int16             `boil:"peer_port" json:"peer_port" toml:"peer_port" yaml:"peer_port"`
+	LastHeartbeat null.Time         `boil:"last_heartbeat" json:"last_heartbeat,omitempty" toml:"last_heartbeat" yaml:"last_heartbeat,omitempty"`
+	OfflineSince  null.Time         `boil:"offline_since" json:"offline_since,omitempty" toml:"offline_since" yaml:"offline_since,omitempty"`
+	CreatedAt     time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *nodeR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L nodeL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var NodeColumns = struct {
-	ID           string
-	PeerID       string
-	RunID        string
-	Region       string
-	InstanceType string
-	Dependencies string
-	CreatedAt    string
+	ID            string
+	CPU           string
+	Memory        string
+	PeerID        string
+	Region        string
+	CMD           string
+	Tags          string
+	Dependencies  string
+	IPAddress     string
+	ServerPort    string
+	PeerPort      string
+	LastHeartbeat string
+	OfflineSince  string
+	CreatedAt     string
 }{
-	ID:           "id",
-	PeerID:       "peer_id",
-	RunID:        "run_id",
-	Region:       "region",
-	InstanceType: "instance_type",
-	Dependencies: "dependencies",
-	CreatedAt:    "created_at",
+	ID:            "id",
+	CPU:           "cpu",
+	Memory:        "memory",
+	PeerID:        "peer_id",
+	Region:        "region",
+	CMD:           "cmd",
+	Tags:          "tags",
+	Dependencies:  "dependencies",
+	IPAddress:     "ip_address",
+	ServerPort:    "server_port",
+	PeerPort:      "peer_port",
+	LastHeartbeat: "last_heartbeat",
+	OfflineSince:  "offline_since",
+	CreatedAt:     "created_at",
 }
 
 var NodeTableColumns = struct {
-	ID           string
-	PeerID       string
-	RunID        string
-	Region       string
-	InstanceType string
-	Dependencies string
-	CreatedAt    string
+	ID            string
+	CPU           string
+	Memory        string
+	PeerID        string
+	Region        string
+	CMD           string
+	Tags          string
+	Dependencies  string
+	IPAddress     string
+	ServerPort    string
+	PeerPort      string
+	LastHeartbeat string
+	OfflineSince  string
+	CreatedAt     string
 }{
-	ID:           "nodes.id",
-	PeerID:       "nodes.peer_id",
-	RunID:        "nodes.run_id",
-	Region:       "nodes.region",
-	InstanceType: "nodes.instance_type",
-	Dependencies: "nodes.dependencies",
-	CreatedAt:    "nodes.created_at",
+	ID:            "nodes.id",
+	CPU:           "nodes.cpu",
+	Memory:        "nodes.memory",
+	PeerID:        "nodes.peer_id",
+	Region:        "nodes.region",
+	CMD:           "nodes.cmd",
+	Tags:          "nodes.tags",
+	Dependencies:  "nodes.dependencies",
+	IPAddress:     "nodes.ip_address",
+	ServerPort:    "nodes.server_port",
+	PeerPort:      "nodes.peer_port",
+	LastHeartbeat: "nodes.last_heartbeat",
+	OfflineSince:  "nodes.offline_since",
+	CreatedAt:     "nodes.created_at",
 }
 
 // Generated where
@@ -120,6 +156,27 @@ func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
+type whereHelpertypes_StringArray struct{ field string }
+
+func (w whereHelpertypes_StringArray) EQ(x types.StringArray) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelpertypes_StringArray) NEQ(x types.StringArray) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelpertypes_StringArray) LT(x types.StringArray) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertypes_StringArray) LTE(x types.StringArray) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertypes_StringArray) GT(x types.StringArray) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertypes_StringArray) GTE(x types.StringArray) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
 type whereHelpertypes_JSON struct{ field string }
 
 func (w whereHelpertypes_JSON) EQ(x types.JSON) qm.QueryMod {
@@ -140,6 +197,53 @@ func (w whereHelpertypes_JSON) GT(x types.JSON) qm.QueryMod {
 func (w whereHelpertypes_JSON) GTE(x types.JSON) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
+
+type whereHelperint16 struct{ field string }
+
+func (w whereHelperint16) EQ(x int16) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint16) NEQ(x int16) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint16) LT(x int16) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint16) LTE(x int16) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint16) GT(x int16) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint16) GTE(x int16) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint16) IN(slice []int16) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperint16) NIN(slice []int16) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+type whereHelpernull_Time struct{ field string }
+
+func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
 type whereHelpertime_Time struct{ field string }
 
@@ -163,37 +267,48 @@ func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
 }
 
 var NodeWhere = struct {
-	ID           whereHelperint
-	PeerID       whereHelperstring
-	RunID        whereHelperint
-	Region       whereHelperstring
-	InstanceType whereHelperstring
-	Dependencies whereHelpertypes_JSON
-	CreatedAt    whereHelpertime_Time
+	ID            whereHelperint
+	CPU           whereHelperint
+	Memory        whereHelperint
+	PeerID        whereHelperstring
+	Region        whereHelperstring
+	CMD           whereHelperstring
+	Tags          whereHelpertypes_StringArray
+	Dependencies  whereHelpertypes_JSON
+	IPAddress     whereHelperstring
+	ServerPort    whereHelperint16
+	PeerPort      whereHelperint16
+	LastHeartbeat whereHelpernull_Time
+	OfflineSince  whereHelpernull_Time
+	CreatedAt     whereHelpertime_Time
 }{
-	ID:           whereHelperint{field: "\"nodes\".\"id\""},
-	PeerID:       whereHelperstring{field: "\"nodes\".\"peer_id\""},
-	RunID:        whereHelperint{field: "\"nodes\".\"run_id\""},
-	Region:       whereHelperstring{field: "\"nodes\".\"region\""},
-	InstanceType: whereHelperstring{field: "\"nodes\".\"instance_type\""},
-	Dependencies: whereHelpertypes_JSON{field: "\"nodes\".\"dependencies\""},
-	CreatedAt:    whereHelpertime_Time{field: "\"nodes\".\"created_at\""},
+	ID:            whereHelperint{field: "\"nodes\".\"id\""},
+	CPU:           whereHelperint{field: "\"nodes\".\"cpu\""},
+	Memory:        whereHelperint{field: "\"nodes\".\"memory\""},
+	PeerID:        whereHelperstring{field: "\"nodes\".\"peer_id\""},
+	Region:        whereHelperstring{field: "\"nodes\".\"region\""},
+	CMD:           whereHelperstring{field: "\"nodes\".\"cmd\""},
+	Tags:          whereHelpertypes_StringArray{field: "\"nodes\".\"tags\""},
+	Dependencies:  whereHelpertypes_JSON{field: "\"nodes\".\"dependencies\""},
+	IPAddress:     whereHelperstring{field: "\"nodes\".\"ip_address\""},
+	ServerPort:    whereHelperint16{field: "\"nodes\".\"server_port\""},
+	PeerPort:      whereHelperint16{field: "\"nodes\".\"peer_port\""},
+	LastHeartbeat: whereHelpernull_Time{field: "\"nodes\".\"last_heartbeat\""},
+	OfflineSince:  whereHelpernull_Time{field: "\"nodes\".\"offline_since\""},
+	CreatedAt:     whereHelpertime_Time{field: "\"nodes\".\"created_at\""},
 }
 
 // NodeRels is where relationship names are stored.
 var NodeRels = struct {
-	Run        string
 	Provides   string
 	Retrievals string
 }{
-	Run:        "Run",
 	Provides:   "Provides",
 	Retrievals: "Retrievals",
 }
 
 // nodeR is where relationships are stored.
 type nodeR struct {
-	Run        *Run           `boil:"Run" json:"Run" toml:"Run" yaml:"Run"`
 	Provides   ProvideSlice   `boil:"Provides" json:"Provides" toml:"Provides" yaml:"Provides"`
 	Retrievals RetrievalSlice `boil:"Retrievals" json:"Retrievals" toml:"Retrievals" yaml:"Retrievals"`
 }
@@ -201,13 +316,6 @@ type nodeR struct {
 // NewStruct creates a new relationship struct
 func (*nodeR) NewStruct() *nodeR {
 	return &nodeR{}
-}
-
-func (r *nodeR) GetRun() *Run {
-	if r == nil {
-		return nil
-	}
-	return r.Run
 }
 
 func (r *nodeR) GetProvides() ProvideSlice {
@@ -228,9 +336,9 @@ func (r *nodeR) GetRetrievals() RetrievalSlice {
 type nodeL struct{}
 
 var (
-	nodeAllColumns            = []string{"id", "peer_id", "run_id", "region", "instance_type", "dependencies", "created_at"}
-	nodeColumnsWithoutDefault = []string{"peer_id", "run_id", "region", "instance_type", "dependencies", "created_at"}
-	nodeColumnsWithDefault    = []string{"id"}
+	nodeAllColumns            = []string{"id", "cpu", "memory", "peer_id", "region", "cmd", "tags", "dependencies", "ip_address", "server_port", "peer_port", "last_heartbeat", "offline_since", "created_at"}
+	nodeColumnsWithoutDefault = []string{"cpu", "memory", "peer_id", "region", "cmd", "tags", "dependencies", "ip_address", "server_port", "peer_port", "created_at"}
+	nodeColumnsWithDefault    = []string{"id", "last_heartbeat", "offline_since"}
 	nodePrimaryKeyColumns     = []string{"id"}
 	nodeGeneratedColumns      = []string{"id"}
 )
@@ -513,17 +621,6 @@ func (q nodeQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 	return count > 0, nil
 }
 
-// Run pointed to by the foreign key.
-func (o *Node) Run(mods ...qm.QueryMod) runQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.RunID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return Runs(queryMods...)
-}
-
 // Provides retrieves all the provide's Provides with an executor.
 func (o *Node) Provides(mods ...qm.QueryMod) provideQuery {
 	var queryMods []qm.QueryMod
@@ -550,126 +647,6 @@ func (o *Node) Retrievals(mods ...qm.QueryMod) retrievalQuery {
 	)
 
 	return Retrievals(queryMods...)
-}
-
-// LoadRun allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (nodeL) LoadRun(ctx context.Context, e boil.ContextExecutor, singular bool, maybeNode interface{}, mods queries.Applicator) error {
-	var slice []*Node
-	var object *Node
-
-	if singular {
-		var ok bool
-		object, ok = maybeNode.(*Node)
-		if !ok {
-			object = new(Node)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeNode)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeNode))
-			}
-		}
-	} else {
-		s, ok := maybeNode.(*[]*Node)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeNode)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeNode))
-			}
-		}
-	}
-
-	args := make([]interface{}, 0, 1)
-	if singular {
-		if object.R == nil {
-			object.R = &nodeR{}
-		}
-		args = append(args, object.RunID)
-
-	} else {
-	Outer:
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &nodeR{}
-			}
-
-			for _, a := range args {
-				if a == obj.RunID {
-					continue Outer
-				}
-			}
-
-			args = append(args, obj.RunID)
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	query := NewQuery(
-		qm.From(`runs`),
-		qm.WhereIn(`runs.id in ?`, args...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load Run")
-	}
-
-	var resultSlice []*Run
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Run")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for runs")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for runs")
-	}
-
-	if len(runAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.Run = foreign
-		if foreign.R == nil {
-			foreign.R = &runR{}
-		}
-		foreign.R.Nodes = append(foreign.R.Nodes, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.RunID == foreign.ID {
-				local.R.Run = foreign
-				if foreign.R == nil {
-					foreign.R = &runR{}
-				}
-				foreign.R.Nodes = append(foreign.R.Nodes, local)
-				break
-			}
-		}
-	}
-
-	return nil
 }
 
 // LoadProvides allows an eager lookup of values, cached into the
@@ -895,53 +872,6 @@ func (nodeL) LoadRetrievals(ctx context.Context, e boil.ContextExecutor, singula
 				break
 			}
 		}
-	}
-
-	return nil
-}
-
-// SetRun of the node to the related item.
-// Sets o.R.Run to related.
-// Adds o to related.R.Nodes.
-func (o *Node) SetRun(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Run) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	}
-
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"nodes\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"run_id"}),
-		strmangle.WhereClause("\"", "\"", 2, nodePrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	o.RunID = related.ID
-	if o.R == nil {
-		o.R = &nodeR{
-			Run: related,
-		}
-	} else {
-		o.R.Run = related
-	}
-
-	if related.R == nil {
-		related.R = &runR{
-			Nodes: NodeSlice{o},
-		}
-	} else {
-		related.R.Nodes = append(related.R.Nodes, o)
 	}
 
 	return nil

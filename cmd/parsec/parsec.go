@@ -29,9 +29,6 @@ var (
 )
 
 func main() {
-	// ShortCommit version tag
-	verTag := fmt.Sprintf("v%s+%s", RawVersion, ShortCommit)
-
 	app := &cli.App{
 		Name: "parsec",
 		Authors: []*cli.Author{
@@ -40,36 +37,124 @@ func main() {
 				Email: "dennis@protocol.ai",
 			},
 		},
-		Version: verTag,
+		Version: fmt.Sprintf("v%s+%s", RawVersion, ShortCommit),
 		Before:  Before,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:        "debug",
 				Usage:       "Set this flag to enable debug logging",
 				EnvVars:     []string{"PARSEC_DEBUG"},
-				Value:       config.DefaultGlobalConfig.Debug,
-				DefaultText: strconv.FormatBool(config.DefaultGlobalConfig.Debug),
+				DefaultText: strconv.FormatBool(config.Global.Debug),
+				Destination: &config.Global.Debug,
+				Value:       config.Global.Debug,
 			},
 			&cli.IntFlag{
 				Name:        "log-level",
 				Usage:       "Set this flag to a value from 0 (least verbose) to 6 (most verbose). Overrides the --debug flag",
 				EnvVars:     []string{"PARSEC_LOG_LEVEL"},
-				Value:       config.DefaultGlobalConfig.LogLevel,
-				DefaultText: strconv.Itoa(config.DefaultGlobalConfig.LogLevel),
+				DefaultText: strconv.Itoa(config.Global.LogLevel),
+				Destination: &config.Global.LogLevel,
+				Value:       config.Global.LogLevel,
 			},
 			&cli.StringFlag{
 				Name:        "telemetry-host",
 				Usage:       "To which network address should the telemetry (prometheus, pprof) server bind",
 				EnvVars:     []string{"PARSEC_TELEMETRY_HOST"},
-				Value:       config.DefaultGlobalConfig.TelemetryHost,
-				DefaultText: config.DefaultGlobalConfig.TelemetryHost,
+				DefaultText: config.Global.TelemetryHost,
+				Destination: &config.Global.TelemetryHost,
+				Value:       config.Global.TelemetryHost,
 			},
 			&cli.IntFlag{
 				Name:        "telemetry-port",
 				Usage:       "On which port should the telemetry (prometheus, pprof) server listen",
 				EnvVars:     []string{"PARSEC_TELEMETRY_PORT"},
-				Value:       config.DefaultGlobalConfig.TelemetryPort,
-				DefaultText: strconv.Itoa(config.DefaultGlobalConfig.TelemetryPort),
+				DefaultText: strconv.Itoa(config.Global.TelemetryPort),
+				Destination: &config.Global.TelemetryPort,
+				Value:       config.Global.TelemetryPort,
+			},
+			&cli.BoolFlag{
+				Name:        "dry-run",
+				Usage:       "Whether to save data to the database or not",
+				EnvVars:     []string{"PARSEC_SCHEDULE_DRY_RUN"},
+				DefaultText: strconv.FormatBool(config.Global.DryRun),
+				Value:       config.Global.DryRun,
+				Destination: &config.Global.DryRun,
+			},
+			&cli.StringFlag{
+				Name:        "db-host",
+				Usage:       "On which host address can nebula reach the database",
+				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_HOST"},
+				DefaultText: config.Global.DatabaseHost,
+				Value:       config.Global.DatabaseHost,
+				Destination: &config.Global.DatabaseHost,
+			},
+			&cli.IntFlag{
+				Name:        "db-port",
+				Usage:       "On which port can nebula reach the database",
+				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_PORT"},
+				DefaultText: strconv.Itoa(config.Global.DatabasePort),
+				Value:       config.Global.DatabasePort,
+				Destination: &config.Global.DatabasePort,
+			},
+			&cli.StringFlag{
+				Name:        "db-name",
+				Usage:       "The name of the database to use",
+				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_NAME"},
+				DefaultText: config.Global.DatabaseName,
+				Value:       config.Global.DatabaseName,
+				Destination: &config.Global.DatabaseName,
+			},
+			&cli.StringFlag{
+				Name:        "db-password",
+				Usage:       "The password for the database to use",
+				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_PASSWORD"},
+				DefaultText: config.Global.DatabasePassword,
+				Value:       config.Global.DatabasePassword,
+				Destination: &config.Global.DatabasePassword,
+			},
+			&cli.StringFlag{
+				Name:        "db-user",
+				Usage:       "The user with which to access the database to use",
+				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_USER"},
+				DefaultText: config.Global.DatabaseUser,
+				Value:       config.Global.DatabaseUser,
+				Destination: &config.Global.DatabaseUser,
+			},
+			&cli.StringFlag{
+				Name:        "db-sslmode",
+				Usage:       "The sslmode to use when connecting the the database",
+				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_SSL_MODE"},
+				DefaultText: config.Global.DatabaseSSLMode,
+				Value:       config.Global.DatabaseSSLMode,
+				Destination: &config.Global.DatabaseSSLMode,
+			},
+			&cli.StringFlag{
+				// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v4.html
+				// https://stackoverflow.com/questions/55718332/how-do-i-get-my-ip-address-from-inside-an-ecs-container-running-with-the-awsvpc
+				Name:        "ecs-metadata-uri-v4",
+				Usage:       "The URL to the metadata endpoint",
+				EnvVars:     []string{"ECS_CONTAINER_METADATA_URI_V4"},
+				DefaultText: config.Global.ECSContainerMetadataURIV4,
+				Value:       config.Global.ECSContainerMetadataURIV4,
+				Destination: &config.Global.ECSContainerMetadataURIV4,
+			},
+			&cli.StringFlag{
+				Name:        "ecs-metadata",
+				Usage:       "The ECS container metadata JSON (skips querying the URIv4 endpoint)",
+				EnvVars:     []string{"ECS_CONTAINER_METADATA"},
+				DefaultText: config.Global.ECSContainerMetadata,
+				Value:       config.Global.ECSContainerMetadata,
+				Destination: &config.Global.ECSContainerMetadata,
+			},
+			&cli.StringFlag{
+				// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v4.html
+				// https://stackoverflow.com/questions/55718332/how-do-i-get-my-ip-address-from-inside-an-ecs-container-running-with-the-awsvpc
+				Name:        "aws-region",
+				Usage:       "The AWS region that this server is running in",
+				EnvVars:     []string{"AWS_REGION"},
+				DefaultText: config.Global.AWSRegion,
+				Value:       config.Global.AWSRegion,
+				Destination: &config.Global.AWSRegion,
 			},
 		},
 		EnableBashCompletion: true,

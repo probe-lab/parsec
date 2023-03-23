@@ -1,10 +1,14 @@
 package server
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -51,6 +55,8 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	provider := <-s.host.DHT.FindProvidersAsync(ctx, c, 1)
 	resp.Duration = time.Since(start)
 
+	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(err == nil)).Observe(resp.Duration.Seconds())
+
 	logEntry = logEntry.WithField("dur", resp.Duration.Seconds())
 
 	if errors.Is(provider.ID.Validate(), peer.ErrEmptyPeerID) {
@@ -75,6 +81,40 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+}
+
+func (c *Client) Retrieve(ctx context.Context, content cid.Cid) (*RetrievalResponse, error) {
+	rr := &RetrieveRequest{}
+
+	data, err := json.Marshal(rr)
+	if err != nil {
+		return nil, fmt.Errorf("marshal retrieval request: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/retrieve/%s", c.addr, content.String()), bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("create retrieve request: %w", err)
+	}
+	req = req.WithContext(ctx)
+
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("post retrieval request: %w", err)
+	}
+
+	dat, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read retrieval response: %w", err)
+	}
+
+	retrieval := RetrievalResponse{}
+	if err = json.Unmarshal(dat, &retrieval); err != nil {
+		return nil, fmt.Errorf("unmarshal retrieval response: %w", err)
+	}
+
+	return &retrieval, nil
 }
 
 type RetrievalResponse struct {

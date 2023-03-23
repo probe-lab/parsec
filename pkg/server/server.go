@@ -3,6 +3,13 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/dennis-tra/parsec/pkg/models"
+
+	"github.com/dennis-tra/parsec/pkg/db"
+
+	"github.com/dennis-tra/parsec/pkg/config"
 
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 
@@ -22,18 +29,19 @@ import (
 )
 
 type Server struct {
-	ctx    context.Context
 	server *http.Server
 	done   chan struct{}
 	cancel context.CancelFunc
 	addr   string
 	host   *dht.Host
+	dbc    db.Client
+	dbNode *models.Node
 }
 
-func NewServer(serverHost string, serverPort int, peerPort int, fullRT bool) (*Server, error) {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*Server, error) {
+	ctx, cancel := context.WithCancel(ctx)
 
-	parsecHost, err := dht.New(ctx, peerPort, fullRT)
+	parsecHost, err := dht.New(ctx, conf.PeerPort, conf.FullRT)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("new host: %w", err)
@@ -47,11 +55,18 @@ func NewServer(serverHost string, serverPort int, peerPort int, fullRT bool) (*S
 		}
 	}
 
+	dbNode, err := dbc.InsertNode(ctx, parsecHost.ID(), conf)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("insert node: %w", err)
+	}
+
 	s := &Server{
-		ctx:    ctx,
 		cancel: cancel,
-		addr:   fmt.Sprintf("%s:%d", serverHost, serverPort),
+		dbc:    dbc,
+		addr:   fmt.Sprintf("%s:%d", conf.ServerHost, conf.ServerPort),
 		host:   parsecHost,
+		dbNode: dbNode,
 		done:   make(chan struct{}),
 	}
 
@@ -59,12 +74,21 @@ func NewServer(serverHost string, serverPort int, peerPort int, fullRT bool) (*S
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	defer func() {
+		log.Infoln("Updating server offline timestamp...")
+		if err := s.dbc.UpdateOfflineSince(ctx, s.dbNode); err != nil {
+			log.WithError(err).WithField("nodeID", s.dbNode.ID).Warnln("Couldn't update offline since field of node")
+		}
+	}()
+
 	errg := errgroup.Group{}
 
 	errg.Go(func() error {
+		log.Infoln("Stopping server...")
 		return s.server.Shutdown(ctx)
 	})
 	errg.Go(func() error {
+		log.Infoln("Stopping p2p host...")
 		return s.host.Close()
 	})
 	s.cancel()
@@ -85,11 +109,30 @@ func (s *Server) ListenAddr() string {
 	return s.addr
 }
 
-func (s *Server) ListenAndServe() error {
+func (s *Server) ListenAndServe(ctx context.Context) error {
 	tcpListener, err := net.Listen("tcp", s.ListenAddr())
 	if err != nil {
 		return fmt.Errorf("listen tcp: %w", err)
 	}
+
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+			case <-s.done:
+				return
+			case <-ctx.Done():
+				return
+			}
+
+			if err := s.dbc.UpdateHeartbeat(ctx, s.dbNode); err != nil {
+				log.WithError(err).Warnln("Couldn't update heartbeat")
+			}
+		}
+	}()
 
 	router := httprouter.New()
 	router.GET("/info", s.info)
@@ -97,12 +140,13 @@ func (s *Server) ListenAndServe() error {
 	router.POST("/retrieve/:cid", s.retrieve)
 
 	s.server = &http.Server{
-		Handler: s.logHandler(router),
+		Handler: s.metricsHandler(s.logHandler(router)),
 	}
 
 	defer func() {
 		close(s.done)
 	}()
+
 	err = s.server.Serve(tcpListener)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
@@ -118,6 +162,14 @@ func (s *Server) logHandler(h http.Handler) http.Handler {
 			"method": r.Method,
 		}).Infoln("Received Request")
 
+		h.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
+}
+
+func (s *Server) metricsHandler(h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		totalRequests.WithLabelValues(r.Method, r.URL.Path).Inc()
 		h.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)

@@ -10,9 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"time"
-
-	"github.com/dennis-tra/parsec/pkg/server"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/golang-migrate/migrate/v4"
@@ -24,15 +23,19 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 
+	"github.com/dennis-tra/parsec/pkg/config"
 	"github.com/dennis-tra/parsec/pkg/models"
 )
 
 type Client interface {
-	InsertRun(ctx context.Context) (*models.Run, error)
-	InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, region string, it string, bi *debug.BuildInfo) (*models.Node, error)
-	InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *server.RetrievalResponse) (*models.Retrieval, error)
-	InsertProvide(ctx context.Context, dbNodeID int, provide *server.ProvideResponse) (*models.Provide, error)
+	InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error)
+	GetNodes(ctx context.Context, tags []string) (models.NodeSlice, error)
+	InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Retrieval, error)
+	InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Provide, error)
+	UpdateHeartbeat(ctx context.Context, dbNode *models.Node) error
+	UpdateOfflineSince(ctx context.Context, dbNode *models.Node) error
 	Close() error
 }
 
@@ -42,17 +45,20 @@ var migrations embed.FS
 type DBClient struct {
 	// Database handle
 	handle *sql.DB
+	conf   config.GlobalConfig
 }
+
+var _ Client = (*DBClient)(nil)
 
 // InitDBClient establishes a database connection with the provided configuration and applies any pending
 // migrations
-func InitDBClient(ctx context.Context, host string, port int, name string, user string, password string, ssl string) (Client, error) {
+func InitDBClient(ctx context.Context, conf config.GlobalConfig) (Client, error) {
 	log.WithFields(log.Fields{
-		"host": host,
-		"port": port,
-		"name": name,
-		"user": user,
-		"ssl":  ssl,
+		"host": conf.DatabaseHost,
+		"port": conf.DatabasePort,
+		"name": conf.DatabaseName,
+		"user": conf.DatabaseUser,
+		"ssl":  conf.DatabaseSSLMode,
 	}).Infoln("Initializing database client")
 
 	driverName, err := ocsql.Register("postgres")
@@ -62,7 +68,7 @@ func InitDBClient(ctx context.Context, host string, port int, name string, user 
 
 	connStr := fmt.Sprintf(
 		"host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
-		host, port, name, user, password, ssl,
+		conf.DatabaseHost, conf.DatabasePort, conf.DatabaseName, conf.DatabaseUser, conf.DatabasePassword, conf.DatabaseSSLMode,
 	)
 
 	// Open database handle
@@ -76,16 +82,19 @@ func InitDBClient(ctx context.Context, host string, port int, name string, user 
 		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 
-	client := &DBClient{handle: db}
+	client := &DBClient{
+		handle: db,
+		conf:   conf,
+	}
 
-	return client, client.applyMigrations(db, name)
+	return client, client.applyMigrations()
 }
 
 func (c *DBClient) Close() error {
 	return c.handle.Close()
 }
 
-func (c *DBClient) applyMigrations(db *sql.DB, name string) error {
+func (c *DBClient) applyMigrations() error {
 	tmpDir, err := os.MkdirTemp("", "parsec")
 	if err != nil {
 		return fmt.Errorf("create migrations tmp dir: %w", err)
@@ -115,12 +124,12 @@ func (c *DBClient) applyMigrations(db *sql.DB, name string) error {
 	}
 
 	// Apply migrations
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	driver, err := postgres.WithInstance(c.handle, &postgres.Config{})
 	if err != nil {
 		return fmt.Errorf("create driver instance: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(tmpDir, "migrations"), name, driver)
+	m, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(tmpDir, "migrations"), c.conf.DatabaseName, driver)
 	if err != nil {
 		return fmt.Errorf("create migrate instance: %w", err)
 	}
@@ -132,61 +141,85 @@ func (c *DBClient) applyMigrations(db *sql.DB, name string) error {
 	return nil
 }
 
-func (c *DBClient) InsertRun(ctx context.Context) (*models.Run, error) {
+func (c *DBClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error) {
+	ecsm, err := c.conf.ECSMetadata()
+	if err != nil {
+		return nil, fmt.Errorf("ecs metadata: %w", err)
+	}
+
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
-		return nil, fmt.Errorf("read build info")
+		return nil, fmt.Errorf("read build info error")
 	}
 
-	biData, err := json.Marshal(bi)
-	if err != nil {
-		return nil, fmt.Errorf("marshal build info data: %w", err)
-	}
-
-	dbRun := &models.Run{
-		Dependencies: biData,
-		StartedAt:    time.Now(),
-	}
-
-	return dbRun, dbRun.Insert(ctx, c.handle, boil.Infer())
-}
-
-func (c *DBClient) InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, region string, it string, bi *debug.BuildInfo) (*models.Node, error) {
 	biData, err := json.Marshal(bi)
 	if err != nil {
 		return nil, fmt.Errorf("marshal build info data: %w", err)
 	}
 
 	n := &models.Node{
-		RunID:        dbRunID,
+		CPU:          int(ecsm.Limits.CPU),
+		Memory:       int(ecsm.Limits.Memory),
 		PeerID:       peerID.String(),
-		Region:       region,
-		InstanceType: it,
+		Region:       c.conf.AWSRegion,
+		CMD:          strings.Join(os.Args, " "),
 		Dependencies: biData,
+		IPAddress:    ecsm.GetPrivateIP(),
+		Tags:         conf.Tags.Value(),
+		ServerPort:   int16(conf.ServerPort),
+		PeerPort:     int16(conf.PeerPort),
 	}
 
 	return n, n.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *server.RetrievalResponse) (*models.Retrieval, error) {
+func (c *DBClient) GetNodes(ctx context.Context, tags []string) (models.NodeSlice, error) {
+	wheres := []qm.QueryMod{
+		models.NodeWhere.OfflineSince.IsNull(),
+		models.NodeWhere.LastHeartbeat.GTE(null.TimeFrom(time.Now().Add(-2 * time.Minute))),
+	}
+
+	if len(tags) > 0 {
+		wheres = append(wheres, qm.Where(fmt.Sprintf("tags && '{%s}'::TEXT[]", strings.Join(tags, ","))))
+	}
+
+	return models.Nodes(wheres...).All(ctx, c.handle)
+}
+
+func (c *DBClient) UpdateHeartbeat(ctx context.Context, dbNode *models.Node) error {
+	dbNode.LastHeartbeat = null.TimeFrom(time.Now())
+	dbNode.OfflineSince = null.NewTime(time.Now(), false)
+
+	_, err := dbNode.Update(ctx, c.handle, boil.Infer())
+
+	return err
+}
+
+func (c *DBClient) UpdateOfflineSince(ctx context.Context, dbNode *models.Node) error {
+	dbNode.OfflineSince = null.TimeFrom(time.Now())
+	_, err := dbNode.Update(ctx, c.handle, boil.Infer())
+	return err
+}
+
+func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Retrieval, error) {
 	r := &models.Retrieval{
-		Cid:      retrieval.CID,
+		Cid:      cid,
 		NodeID:   dbNodeID,
-		Duration: retrieval.Duration.Seconds(),
-		RTSize:   retrieval.RoutingTableSize,
-		Error:    null.NewString(retrieval.Error, retrieval.Error != ""),
+		Duration: duration,
+		RTSize:   rtSize,
+		Error:    null.NewString(errStr, errStr != ""),
 	}
 
 	return r, r.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, provide *server.ProvideResponse) (*models.Provide, error) {
+func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Provide, error) {
 	p := &models.Provide{
-		Cid:      provide.CID,
+		Cid:      cid,
 		NodeID:   dbNodeID,
-		Duration: provide.Duration.Seconds(),
-		RTSize:   provide.RoutingTableSize,
-		Error:    null.NewString(provide.Error, provide.Error != ""),
+		Duration: duration,
+		RTSize:   rtSize,
+		Error:    null.NewString(errStr, errStr != ""),
 	}
 
 	return p, p.Insert(ctx, c.handle, boil.Infer())
@@ -194,26 +227,34 @@ func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, provide *ser
 
 type DummyClient struct{}
 
+func (d *DummyClient) GetNodes(ctx context.Context, tags []string) (models.NodeSlice, error) {
+	return []*models.Node{}, nil
+}
+
 func NewDummyClient() Client {
 	return &DummyClient{}
 }
 
-func (d *DummyClient) InsertRun(ctx context.Context) (*models.Run, error) {
-	return &models.Run{ID: 1}, nil
+func (d *DummyClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error) {
+	return &models.Node{Region: "dummy", PeerID: peerID.String()}, nil
 }
 
-func (d *DummyClient) InsertNode(ctx context.Context, dbRunID int, peerID peer.ID, region string, it string, bi *debug.BuildInfo) (*models.Node, error) {
-	return &models.Node{RunID: dbRunID, Region: region, InstanceType: it, PeerID: peerID.String()}, nil
-}
-
-func (d *DummyClient) InsertRetrieval(ctx context.Context, dbNodeID int, retrieval *server.RetrievalResponse) (*models.Retrieval, error) {
+func (d *DummyClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Retrieval, error) {
 	return &models.Retrieval{NodeID: dbNodeID}, nil
 }
 
-func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, provide *server.ProvideResponse) (*models.Provide, error) {
+func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Provide, error) {
 	return &models.Provide{NodeID: dbNodeID}, nil
 }
 
 func (d *DummyClient) Close() error {
+	return nil
+}
+
+func (d *DummyClient) UpdateHeartbeat(ctx context.Context, dbNode *models.Node) error {
+	return nil
+}
+
+func (d *DummyClient) UpdateOfflineSince(ctx context.Context, dbNode *models.Node) error {
 	return nil
 }
