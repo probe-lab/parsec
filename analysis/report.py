@@ -43,6 +43,8 @@ def get_retrievals(conn: sa.engine.Engine, start_date: str, end_date: str) -> pd
             INNER JOIN nodes n ON r.node_id = n.id
         WHERE r.created_at >= '{start_date}'
           AND r.created_at < '{end_date}'
+          AND r.rt_size > 200
+          AND n.instance_type = 't3.small'
         ORDER BY r.created_at
     """
     return pd.read_sql_query(query, con=conn)
@@ -61,6 +63,8 @@ def get_publications(conn: sa.engine.Engine, start_date: str, end_date: str) -> 
             INNER JOIN nodes n ON p.node_id = n.id
         WHERE p.created_at >= '{start_date}'
           AND p.created_at < '{end_date}'
+          AND p.rt_size > 190
+          AND n.instance_type = 't3.small'
         ORDER BY p.created_at
     """
     return pd.read_sql_query(query, con=conn)
@@ -71,7 +75,7 @@ def week_boxplots(data: pd.DataFrame, boxcolor: str, ylabel: str, title: str) ->
 
     regions = list(sorted(data["region"].unique()))
 
-    fig, ax = plt.subplots(len(regions) // 2 + len(regions) % 2, 2, figsize=[14, 13], dpi=DPI)
+    fig, ax = plt.subplots(len(regions) // 2 + len(regions) % 2, 2, figsize=[14, 15], dpi=DPI)
 
     for i, region in enumerate(regions):
         ax = fig.axes[i]
@@ -121,7 +125,7 @@ def regional_boxplots(retrievals: pd.DataFrame, provides: pd.DataFrame) -> plt.F
         },
     ]
 
-    fig, ax = plt.subplots(1, 2, figsize=[15, 5], dpi=DPI)
+    fig, ax = plt.subplots(1, 2, figsize=[13, 4], dpi=DPI)
 
     for i, plot in enumerate(plots):
         print(f"Plotting regional boxplot graph...")
@@ -146,6 +150,12 @@ def regional_boxplots(retrievals: pd.DataFrame, provides: pd.DataFrame) -> plt.F
         for j, index in enumerate(data.index):
             y = np.percentile(data.loc[index], 60)
             ax.text(j + 1, y, format(len(data.loc[index]), ","), ha="center", fontdict={"fontsize": 10}, color="w")
+
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(10)
+            tick.set_ha("right")
+
+    fig.tight_layout()
 
     return fig
 
@@ -189,25 +199,69 @@ def regional_cdfs(retrievals: pd.DataFrame, publications: pd.DataFrame) -> plt.F
     return fig
 
 
+def errors(provides: pd.DataFrame, retrievals: pd.DataFrame) -> plt.Figure:
+    plots = [
+        {
+            "data": provides,
+            "color": "r",
+            "type": "Provides",
+        },
+        {
+            "data": retrievals,
+            "color": "b",
+            "type": "Retrievals",
+        }
+    ]
+
+    fig, ax = plt.subplots(1, 2, figsize=[15, 5], dpi=150)
+    for i, plot in enumerate(plots):
+        data = plot["data"].groupby(["region"])["has_error"].agg(['mean', 'count']).reset_index()
+
+        ax = fig.axes[i]
+        ax.bar(data["region"], 100 * data["mean"], color=plot["color"])
+
+        y = 0.05 * data['mean'].max()
+        for i, region in enumerate(data["region"]):
+            ax.text(i, 100 * (data['mean'][i] + y), f"Total {plot['type']}\n{format(int(data['count'][i]), ',')}",
+                    ha="center", va="bottom", bbox={"facecolor": 'white'}, fontsize=8)
+
+            ax.text(i, 100 * y, f"{int((data['mean'] * data['count'])[i])} Failed\n{plot['type']}",
+                    ha="center", va="bottom", bbox={"facecolor": 'white'}, fontsize=8)
+
+        ax.set_ylim(0, 100 * data['mean'].max() * 1.2)
+        ax.set_xlabel("Region")
+        ax.set_ylabel(f"Errors in % of Total {plot['type']}")
+
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(10)
+            tick.set_ha("right")
+
+    fig.tight_layout()
+
+    return fig
+
 def main():
     conn = sa.create_engine(connection_string())
-    date_min = "2023-03-13"
-    date_max = "2023-03-20"
+    date_min = "2023-03-20"
+    date_max = "2023-03-27"
 
     retrievals = get_retrievals(conn, date_min, date_max)
     publications = get_publications(conn, date_min, date_max)
 
     fig = week_boxplots(retrievals, "b", "Time to First Provider Record in s", "Retrievals")
-    fig.savefig("./plots/retrievals_boxplot.png")
+    fig.savefig("./plots/parsec-retrievals-boxplot.png")
 
     fig = week_boxplots(publications, "r", "Publication Duration in s", "Publications")
-    fig.savefig("./plots/publications_boxplot.png")
+    fig.savefig("./plots/parsec-publications-boxplot.png")
 
     fig = regional_boxplots(retrievals, publications)
-    fig.savefig("./plots/regional_boxplot.png")
+    fig.savefig("./plots/parsec-regional-boxplot.png")
 
     fig = regional_cdfs(retrievals, publications)
-    fig.savefig("./plots/regional_cdfs.png")
+    fig.savefig("./plots/parsec-regional-cdfs.png")
+
+    fig = errors(retrievals, publications)
+    fig.savefig("./plots/parsec-errors.png")
 
 
 if __name__ == "__main__":
