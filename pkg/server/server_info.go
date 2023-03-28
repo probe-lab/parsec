@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/libp2p/go-libp2p/core/peer"
-
 	"github.com/julienschmidt/httprouter"
+	"github.com/libp2p/go-libp2p/core/peer"
+	log "github.com/sirupsen/logrus"
 )
 
 type InfoResponse struct {
@@ -42,7 +42,9 @@ func (s *Server) info(rw http.ResponseWriter, r *http.Request, params httprouter
 }
 
 func (c *Client) Info(ctx context.Context) (*InfoResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s/info", c.addr), nil)
+	endpoint := fmt.Sprintf("http://%s/info", c.addr)
+	log.Infoln("GET", endpoint)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create info request: %w", err)
 	}

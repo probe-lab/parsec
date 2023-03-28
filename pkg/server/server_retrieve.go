@@ -91,7 +91,10 @@ func (c *Client) Retrieve(ctx context.Context, content cid.Cid) (*RetrievalRespo
 		return nil, fmt.Errorf("marshal retrieval request: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/retrieve/%s", c.addr, content.String()), bytes.NewReader(data))
+	endpoint := fmt.Sprintf("http://%s/retrieve/%s", c.addr, content.String())
+
+	log.Infoln("POST", endpoint)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("create retrieve request: %w", err)
 	}

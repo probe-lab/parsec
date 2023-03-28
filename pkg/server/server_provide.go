@@ -90,7 +90,9 @@ func (c *Client) Provide(ctx context.Context, content *util.Content) (*ProvideRe
 		return nil, fmt.Errorf("marshal provide request: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/provide", c.addr), bytes.NewReader(data))
+	endpoint := fmt.Sprintf("http://%s/provide", c.addr)
+	log.WithField("cid", content.CID.String()).Infoln("POST", endpoint)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("create retrieve request: %w", err)
 	}
