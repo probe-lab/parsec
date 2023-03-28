@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -66,6 +67,8 @@ func SchedulerAction(c *cli.Context) error {
 			}
 		}
 
+		activeNodes.Set(float64(len(dbNodes)))
+
 		clients := make([]*server.Client, len(dbNodes))
 		for i, node := range dbNodes {
 			clients[i] = server.NewClient(node.IPAddress, node.ServerPort)
@@ -83,6 +86,7 @@ func SchedulerAction(c *cli.Context) error {
 		}
 
 		provide, err := providerClient.Provide(c.Context, content)
+		issuedProvides.WithLabelValues(strconv.FormatBool(err == nil)).Inc()
 		if err != nil {
 			log.WithField("nodeID", providerNode.ID).WithError(err).Warnln("Failed to provide record")
 			if err := dbc.UpdateOfflineSince(c.Context, providerNode); err != nil {
@@ -101,13 +105,16 @@ func SchedulerAction(c *cli.Context) error {
 		// Loop through remaining nodes (len(nodes) - 1)
 		errg, errCtx := errgroup.WithContext(c.Context)
 		for i := 0; i < len(dbNodes)-1; i++ {
+
 			// Start at current provNodeIdx + 1 and roll over after len(nodes) was reached
 			idx := (provNodeIdx + 1 + i) % len(dbNodes)
+
 			retrievalNode := dbNodes[idx]
 			retrievalClient := clients[idx]
 
 			errg.Go(func() error {
 				retrieval, err := retrievalClient.Retrieve(errCtx, content.CID)
+				issuedRetrievals.WithLabelValues(strconv.FormatBool(err == nil)).Inc()
 				if err != nil {
 					log.WithField("nodeID", retrievalNode.ID).WithError(err).Warnln("Failed to retrieve record")
 					if err := dbc.UpdateOfflineSince(c.Context, retrievalNode); err != nil {
@@ -117,7 +124,7 @@ func SchedulerAction(c *cli.Context) error {
 				}
 
 				if _, err := dbc.InsertRetrieval(errCtx, retrievalNode.ID, retrieval.CID, retrieval.Duration.Seconds(), retrieval.RoutingTableSize, retrieval.Error); err != nil {
-					return fmt.Errorf("insert retrieve: %w", err)
+					return fmt.Errorf("insert retrieval: %w", err)
 				}
 
 				return nil
