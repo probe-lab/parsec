@@ -138,6 +138,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	router.GET("/info", s.info)
 	router.POST("/provide", s.provide)
 	router.POST("/retrieve/:cid", s.retrieve)
+	router.GET("/readiness", s.readiness)
 
 	s.server = &http.Server{
 		Handler: s.metricsHandler(s.logHandler(router)),

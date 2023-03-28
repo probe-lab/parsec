@@ -71,7 +71,16 @@ func SchedulerAction(c *cli.Context) error {
 
 		clients := make([]*server.Client, len(dbNodes))
 		for i, node := range dbNodes {
-			clients[i] = server.NewClient(node.IPAddress, node.ServerPort)
+			client := server.NewClient(node.IPAddress, node.ServerPort)
+
+			if err = client.Readiness(c.Context); err != nil {
+				if err := dbc.UpdateOfflineSince(c.Context, node); err != nil {
+					log.WithField("nodeID", node.ID).WithError(err).Warnln("Couldn't put node offline")
+				}
+				continue
+			}
+
+			clients[i] = client
 		}
 
 		// If nodes leave the network
