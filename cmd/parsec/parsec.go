@@ -11,7 +11,8 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	ocprom "contrib.go.opencensus.io/exporter/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -206,8 +207,20 @@ func Before(c *cli.Context) error {
 func metricsListenAndServe(host string, port int) {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.WithField("addr", addr).Debugln("Starting telemetry endpoint")
-	http.Handle("/metrics", promhttp.Handler())
-	if err := http.ListenAndServe(addr, nil); err != nil {
+
+	pe, err := ocprom.NewExporter(ocprom.Options{
+		Namespace:  "parsec",
+		Registerer: prometheus.DefaultRegisterer,
+		Gatherer:   prometheus.DefaultGatherer,
+	})
+	if err != nil {
+		log.Fatalf("Failed to create the Prometheus stats exporter: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", pe)
+
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.WithError(err).Warnln("Error serving prometheus")
 	}
 }

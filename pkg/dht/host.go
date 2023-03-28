@@ -7,11 +7,13 @@ import (
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
+	"github.com/libp2p/go-libp2p-kad-dht/metrics"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/routing"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/stats/view"
 )
 
 const ipfsProtocolPrefix = "/ipfs"
@@ -37,6 +39,10 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool) (*Host, err
 	rm, err := rcmgr.NewResourceManager(limiter)
 	if err != nil {
 		return nil, errors.Wrap(err, "new resource manager")
+	}
+
+	if err = view.Register(metrics.DefaultViews...); err != nil {
+		return nil, fmt.Errorf("register metric views: %w", err)
 	}
 
 	var dht routing.Routing
