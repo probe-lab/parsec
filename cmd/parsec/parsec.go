@@ -83,7 +83,7 @@ func main() {
 			&cli.StringFlag{
 				Name:        "db-host",
 				Usage:       "On which host address can nebula reach the database",
-				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_HOST"},
+				EnvVars:     []string{"PARSEC_DATABASE_HOST"},
 				DefaultText: config.Global.DatabaseHost,
 				Value:       config.Global.DatabaseHost,
 				Destination: &config.Global.DatabaseHost,
@@ -91,7 +91,7 @@ func main() {
 			&cli.IntFlag{
 				Name:        "db-port",
 				Usage:       "On which port can nebula reach the database",
-				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_PORT"},
+				EnvVars:     []string{"PARSEC_DATABASE_PORT"},
 				DefaultText: strconv.Itoa(config.Global.DatabasePort),
 				Value:       config.Global.DatabasePort,
 				Destination: &config.Global.DatabasePort,
@@ -99,7 +99,7 @@ func main() {
 			&cli.StringFlag{
 				Name:        "db-name",
 				Usage:       "The name of the database to use",
-				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_NAME"},
+				EnvVars:     []string{"PARSEC_DATABASE_NAME"},
 				DefaultText: config.Global.DatabaseName,
 				Value:       config.Global.DatabaseName,
 				Destination: &config.Global.DatabaseName,
@@ -107,7 +107,7 @@ func main() {
 			&cli.StringFlag{
 				Name:        "db-password",
 				Usage:       "The password for the database to use",
-				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_PASSWORD"},
+				EnvVars:     []string{"PARSEC_DATABASE_PASSWORD"},
 				DefaultText: config.Global.DatabasePassword,
 				Value:       config.Global.DatabasePassword,
 				Destination: &config.Global.DatabasePassword,
@@ -115,7 +115,7 @@ func main() {
 			&cli.StringFlag{
 				Name:        "db-user",
 				Usage:       "The user with which to access the database to use",
-				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_USER"},
+				EnvVars:     []string{"PARSEC_DATABASE_USER"},
 				DefaultText: config.Global.DatabaseUser,
 				Value:       config.Global.DatabaseUser,
 				Destination: &config.Global.DatabaseUser,
@@ -123,7 +123,7 @@ func main() {
 			&cli.StringFlag{
 				Name:        "db-sslmode",
 				Usage:       "The sslmode to use when connecting the the database",
-				EnvVars:     []string{"PARSEC_SCHEDULE_DATABASE_SSL_MODE"},
+				EnvVars:     []string{"PARSEC_DATABASE_SSL_MODE"},
 				DefaultText: config.Global.DatabaseSSLMode,
 				Value:       config.Global.DatabaseSSLMode,
 				Destination: &config.Global.DatabaseSSLMode,
