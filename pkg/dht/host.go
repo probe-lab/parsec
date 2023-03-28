@@ -21,7 +21,7 @@ type Host struct {
 	DHT routing.Routing
 }
 
-func New(ctx context.Context, port int, fullRT bool) (*Host, error) {
+func New(ctx context.Context, port int, fullRT bool, dhtServer bool) (*Host, error) {
 	addrs := []string{
 		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port),
 		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic", port),
@@ -44,17 +44,22 @@ func New(ctx context.Context, port int, fullRT bool) (*Host, error) {
 		libp2p.ResourceManager(rm),
 		libp2p.ListenAddrStrings(addrs...),
 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
+			mode := kaddht.ModeClient
+			if dhtServer {
+				mode = kaddht.ModeServer
+			}
+
 			var err error
 			if fullRT {
 				log.Infoln("Using full accelerated DHT client")
 				dht, err = fullrt.NewFullRT(h, ipfsProtocolPrefix, fullrt.DHTOption(
 					kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
 					kaddht.BucketSize(20),
-					kaddht.Mode(kaddht.ModeClient),
+					kaddht.Mode(mode),
 				))
 			} else {
 				log.Infoln("Using standard DHT client")
-				dht, err = kaddht.New(ctx, h, kaddht.Mode(kaddht.ModeClient))
+				dht, err = kaddht.New(ctx, h, kaddht.Mode(mode))
 			}
 			return dht, err
 		}),

@@ -51,6 +51,14 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.FullRT,
 			Destination: &config.Server.FullRT,
 		},
+		&cli.BoolFlag{
+			Name:        "dht-server",
+			Usage:       "Whether to enable DHT server mode",
+			EnvVars:     []string{"PARSEC_SERVER_DHT_SERVER"},
+			DefaultText: strconv.FormatBool(config.Server.DHTServer),
+			Value:       config.Server.DHTServer,
+			Destination: &config.Server.DHTServer,
+		},
 		&cli.StringSliceFlag{
 			Name:        "tags",
 			Usage:       "Experiment tags. Used to let the scheduler just query a subset of nodes.",

@@ -86,6 +86,7 @@ type ServerConfig struct {
 	PeerHost   string
 	PeerPort   int
 	FullRT     bool
+	DHTServer  bool
 	Tags       *cli.StringSlice
 }
 
@@ -94,6 +95,8 @@ var Server = ServerConfig{
 	ServerPort: 7070,
 	PeerPort:   4001,
 	Tags:       cli.NewStringSlice(),
+	FullRT:     false,
+	DHTServer:  false,
 }
 
 type SchedulerConfig struct {
