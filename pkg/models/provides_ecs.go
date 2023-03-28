@@ -63,13 +63,13 @@ var ProvideTableColumns = struct {
 	Error     string
 	CreatedAt string
 }{
-	ID:        "provides.id",
-	NodeID:    "provides.node_id",
-	RTSize:    "provides.rt_size",
-	Duration:  "provides.duration",
-	Cid:       "provides.cid",
-	Error:     "provides.error",
-	CreatedAt: "provides.created_at",
+	ID:        "provides_ecs.id",
+	NodeID:    "provides_ecs.node_id",
+	RTSize:    "provides_ecs.rt_size",
+	Duration:  "provides_ecs.duration",
+	Cid:       "provides_ecs.cid",
+	Error:     "provides_ecs.error",
+	CreatedAt: "provides_ecs.created_at",
 }
 
 // Generated where
@@ -150,13 +150,13 @@ var ProvideWhere = struct {
 	Error     whereHelpernull_String
 	CreatedAt whereHelpertime_Time
 }{
-	ID:        whereHelperint{field: "\"provides\".\"id\""},
-	NodeID:    whereHelperint{field: "\"provides\".\"node_id\""},
-	RTSize:    whereHelperint{field: "\"provides\".\"rt_size\""},
-	Duration:  whereHelperfloat64{field: "\"provides\".\"duration\""},
-	Cid:       whereHelperstring{field: "\"provides\".\"cid\""},
-	Error:     whereHelpernull_String{field: "\"provides\".\"error\""},
-	CreatedAt: whereHelpertime_Time{field: "\"provides\".\"created_at\""},
+	ID:        whereHelperint{field: "\"provides_ecs\".\"id\""},
+	NodeID:    whereHelperint{field: "\"provides_ecs\".\"node_id\""},
+	RTSize:    whereHelperint{field: "\"provides_ecs\".\"rt_size\""},
+	Duration:  whereHelperfloat64{field: "\"provides_ecs\".\"duration\""},
+	Cid:       whereHelperstring{field: "\"provides_ecs\".\"cid\""},
+	Error:     whereHelpernull_String{field: "\"provides_ecs\".\"error\""},
+	CreatedAt: whereHelpertime_Time{field: "\"provides_ecs\".\"created_at\""},
 }
 
 // ProvideRels is where relationship names are stored.
@@ -411,7 +411,7 @@ func (q provideQuery) One(ctx context.Context, exec boil.ContextExecutor) (*Prov
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: failed to execute a one query for provides")
+		return nil, errors.Wrap(err, "models: failed to execute a one query for provides_ecs")
 	}
 
 	if err := o.doAfterSelectHooks(ctx, exec); err != nil {
@@ -450,7 +450,7 @@ func (q provideQuery) Count(ctx context.Context, exec boil.ContextExecutor) (int
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to count provides rows")
+		return 0, errors.Wrap(err, "models: failed to count provides_ecs rows")
 	}
 
 	return count, nil
@@ -466,7 +466,7 @@ func (q provideQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bo
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return false, errors.Wrap(err, "models: failed to check if provides exists")
+		return false, errors.Wrap(err, "models: failed to check if provides_ecs exists")
 	}
 
 	return count > 0, nil
@@ -541,8 +541,8 @@ func (provideL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular b
 	}
 
 	query := NewQuery(
-		qm.From(`nodes`),
-		qm.WhereIn(`nodes.id in ?`, args...),
+		qm.From(`nodes_ecs`),
+		qm.WhereIn(`nodes_ecs.id in ?`, args...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -559,10 +559,10 @@ func (provideL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular b
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for nodes")
+		return errors.Wrap(err, "failed to close results of eager load for nodes_ecs")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for nodes")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for nodes_ecs")
 	}
 
 	if len(nodeAfterSelectHooks) != 0 {
@@ -583,7 +583,7 @@ func (provideL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular b
 		if foreign.R == nil {
 			foreign.R = &nodeR{}
 		}
-		foreign.R.Provides = append(foreign.R.Provides, object)
+		foreign.R.NodeProvidesEcs = append(foreign.R.NodeProvidesEcs, object)
 		return nil
 	}
 
@@ -594,7 +594,7 @@ func (provideL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular b
 				if foreign.R == nil {
 					foreign.R = &nodeR{}
 				}
-				foreign.R.Provides = append(foreign.R.Provides, local)
+				foreign.R.NodeProvidesEcs = append(foreign.R.NodeProvidesEcs, local)
 				break
 			}
 		}
@@ -605,7 +605,7 @@ func (provideL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular b
 
 // SetNode of the provide to the related item.
 // Sets o.R.Node to related.
-// Adds o to related.R.Provides.
+// Adds o to related.R.NodeProvidesEcs.
 func (o *Provide) SetNode(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Node) error {
 	var err error
 	if insert {
@@ -615,7 +615,7 @@ func (o *Provide) SetNode(ctx context.Context, exec boil.ContextExecutor, insert
 	}
 
 	updateQuery := fmt.Sprintf(
-		"UPDATE \"provides\" SET %s WHERE %s",
+		"UPDATE \"provides_ecs\" SET %s WHERE %s",
 		strmangle.SetParamNames("\"", "\"", 1, []string{"node_id"}),
 		strmangle.WhereClause("\"", "\"", 2, providePrimaryKeyColumns),
 	)
@@ -641,10 +641,10 @@ func (o *Provide) SetNode(ctx context.Context, exec boil.ContextExecutor, insert
 
 	if related.R == nil {
 		related.R = &nodeR{
-			Provides: ProvideSlice{o},
+			NodeProvidesEcs: ProvideSlice{o},
 		}
 	} else {
-		related.R.Provides = append(related.R.Provides, o)
+		related.R.NodeProvidesEcs = append(related.R.NodeProvidesEcs, o)
 	}
 
 	return nil
@@ -652,10 +652,10 @@ func (o *Provide) SetNode(ctx context.Context, exec boil.ContextExecutor, insert
 
 // Provides retrieves all the records using an executor.
 func Provides(mods ...qm.QueryMod) provideQuery {
-	mods = append(mods, qm.From("\"provides\""))
+	mods = append(mods, qm.From("\"provides_ecs\""))
 	q := NewQuery(mods...)
 	if len(queries.GetSelect(q)) == 0 {
-		queries.SetSelect(q, []string{"\"provides\".*"})
+		queries.SetSelect(q, []string{"\"provides_ecs\".*"})
 	}
 
 	return provideQuery{q}
@@ -671,7 +671,7 @@ func FindProvide(ctx context.Context, exec boil.ContextExecutor, iD int, selectC
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"provides\" where \"id\"=$1", sel,
+		"select %s from \"provides_ecs\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -681,7 +681,7 @@ func FindProvide(ctx context.Context, exec boil.ContextExecutor, iD int, selectC
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: unable to select from provides")
+		return nil, errors.Wrap(err, "models: unable to select from provides_ecs")
 	}
 
 	if err = provideObj.doAfterSelectHooks(ctx, exec); err != nil {
@@ -695,7 +695,7 @@ func FindProvide(ctx context.Context, exec boil.ContextExecutor, iD int, selectC
 // See boil.Columns.InsertColumnSet documentation to understand column list inference for inserts.
 func (o *Provide) Insert(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no provides provided for insertion")
+		return errors.New("models: no provides_ecs provided for insertion")
 	}
 
 	var err error
@@ -736,9 +736,9 @@ func (o *Provide) Insert(ctx context.Context, exec boil.ContextExecutor, columns
 			return err
 		}
 		if len(wl) != 0 {
-			cache.query = fmt.Sprintf("INSERT INTO \"provides\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
+			cache.query = fmt.Sprintf("INSERT INTO \"provides_ecs\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
 		} else {
-			cache.query = "INSERT INTO \"provides\" %sDEFAULT VALUES%s"
+			cache.query = "INSERT INTO \"provides_ecs\" %sDEFAULT VALUES%s"
 		}
 
 		var queryOutput, queryReturning string
@@ -766,7 +766,7 @@ func (o *Provide) Insert(ctx context.Context, exec boil.ContextExecutor, columns
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "models: unable to insert into provides")
+		return errors.Wrap(err, "models: unable to insert into provides_ecs")
 	}
 
 	if !cached {
@@ -802,10 +802,10 @@ func (o *Provide) Update(ctx context.Context, exec boil.ContextExecutor, columns
 			wl = strmangle.SetComplement(wl, []string{"created_at"})
 		}
 		if len(wl) == 0 {
-			return 0, errors.New("models: unable to update provides, could not build whitelist")
+			return 0, errors.New("models: unable to update provides_ecs, could not build whitelist")
 		}
 
-		cache.query = fmt.Sprintf("UPDATE \"provides\" SET %s WHERE %s",
+		cache.query = fmt.Sprintf("UPDATE \"provides_ecs\" SET %s WHERE %s",
 			strmangle.SetParamNames("\"", "\"", 1, wl),
 			strmangle.WhereClause("\"", "\"", len(wl)+1, providePrimaryKeyColumns),
 		)
@@ -825,12 +825,12 @@ func (o *Provide) Update(ctx context.Context, exec boil.ContextExecutor, columns
 	var result sql.Result
 	result, err = exec.ExecContext(ctx, cache.query, values...)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to update provides row")
+		return 0, errors.Wrap(err, "models: unable to update provides_ecs row")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by update for provides")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by update for provides_ecs")
 	}
 
 	if !cached {
@@ -848,12 +848,12 @@ func (q provideQuery) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 
 	result, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to update all for provides")
+		return 0, errors.Wrap(err, "models: unable to update all for provides_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to retrieve rows affected for provides")
+		return 0, errors.Wrap(err, "models: unable to retrieve rows affected for provides_ecs")
 	}
 
 	return rowsAff, nil
@@ -886,7 +886,7 @@ func (o ProvideSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := fmt.Sprintf("UPDATE \"provides\" SET %s WHERE %s",
+	sql := fmt.Sprintf("UPDATE \"provides_ecs\" SET %s WHERE %s",
 		strmangle.SetParamNames("\"", "\"", 1, colNames),
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, providePrimaryKeyColumns, len(o)))
 
@@ -911,7 +911,7 @@ func (o ProvideSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 // See boil.Columns documentation for how to properly use updateColumns and insertColumns.
 func (o *Provide) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no provides provided for upsert")
+		return errors.New("models: no provides_ecs provided for upsert")
 	}
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
@@ -978,7 +978,7 @@ func (o *Provide) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 		update = strmangle.SetComplement(update, provideGeneratedColumns)
 
 		if updateOnConflict && len(update) == 0 {
-			return errors.New("models: unable to upsert provides, could not build update column list")
+			return errors.New("models: unable to upsert provides_ecs, could not build update column list")
 		}
 
 		conflict := conflictColumns
@@ -986,7 +986,7 @@ func (o *Provide) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 			conflict = make([]string, len(providePrimaryKeyColumns))
 			copy(conflict, providePrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQueryPostgres(dialect, "\"provides\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"provides_ecs\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(provideType, provideMapping, insert)
 		if err != nil {
@@ -1021,7 +1021,7 @@ func (o *Provide) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 		_, err = exec.ExecContext(ctx, cache.query, vals...)
 	}
 	if err != nil {
-		return errors.Wrap(err, "models: unable to upsert provides")
+		return errors.Wrap(err, "models: unable to upsert provides_ecs")
 	}
 
 	if !cached {
@@ -1045,7 +1045,7 @@ func (o *Provide) Delete(ctx context.Context, exec boil.ContextExecutor) (int64,
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), providePrimaryKeyMapping)
-	sql := "DELETE FROM \"provides\" WHERE \"id\"=$1"
+	sql := "DELETE FROM \"provides_ecs\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1054,12 +1054,12 @@ func (o *Provide) Delete(ctx context.Context, exec boil.ContextExecutor) (int64,
 	}
 	result, err := exec.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to delete from provides")
+		return 0, errors.Wrap(err, "models: unable to delete from provides_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by delete for provides")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by delete for provides_ecs")
 	}
 
 	if err := o.doAfterDeleteHooks(ctx, exec); err != nil {
@@ -1079,12 +1079,12 @@ func (q provideQuery) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 
 	result, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to delete all from provides")
+		return 0, errors.Wrap(err, "models: unable to delete all from provides_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for provides")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for provides_ecs")
 	}
 
 	return rowsAff, nil
@@ -1110,7 +1110,7 @@ func (o ProvideSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "DELETE FROM \"provides\" WHERE " +
+	sql := "DELETE FROM \"provides_ecs\" WHERE " +
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, providePrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
@@ -1125,7 +1125,7 @@ func (o ProvideSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for provides")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for provides_ecs")
 	}
 
 	if len(provideAfterDeleteHooks) != 0 {
@@ -1165,7 +1165,7 @@ func (o *ProvideSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "SELECT \"provides\".* FROM \"provides\" WHERE " +
+	sql := "SELECT \"provides_ecs\".* FROM \"provides_ecs\" WHERE " +
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, providePrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
@@ -1183,7 +1183,7 @@ func (o *ProvideSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 // ProvideExists checks if the Provide row exists.
 func ProvideExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"provides\" where \"id\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"provides_ecs\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1194,7 +1194,7 @@ func ProvideExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool
 
 	err := row.Scan(&exists)
 	if err != nil {
-		return false, errors.Wrap(err, "models: unable to check if provides exists")
+		return false, errors.Wrap(err, "models: unable to check if provides_ecs exists")
 	}
 
 	return exists, nil

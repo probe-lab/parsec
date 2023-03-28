@@ -13,7 +13,7 @@ var totalRequests = prometheus.NewCounterVec(
 var latencies = prometheus.NewSummaryVec(
 	prometheus.SummaryOpts{
 		Name:       "parsec_durations",
-		Help:       "Redis requests latencies in seconds",
+		Help:       "ttfpr latencies",
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 	},
 	[]string{"type", "success"},

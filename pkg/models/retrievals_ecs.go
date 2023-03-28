@@ -63,13 +63,13 @@ var RetrievalTableColumns = struct {
 	Error     string
 	CreatedAt string
 }{
-	ID:        "retrievals.id",
-	NodeID:    "retrievals.node_id",
-	RTSize:    "retrievals.rt_size",
-	Duration:  "retrievals.duration",
-	Cid:       "retrievals.cid",
-	Error:     "retrievals.error",
-	CreatedAt: "retrievals.created_at",
+	ID:        "retrievals_ecs.id",
+	NodeID:    "retrievals_ecs.node_id",
+	RTSize:    "retrievals_ecs.rt_size",
+	Duration:  "retrievals_ecs.duration",
+	Cid:       "retrievals_ecs.cid",
+	Error:     "retrievals_ecs.error",
+	CreatedAt: "retrievals_ecs.created_at",
 }
 
 // Generated where
@@ -83,13 +83,13 @@ var RetrievalWhere = struct {
 	Error     whereHelpernull_String
 	CreatedAt whereHelpertime_Time
 }{
-	ID:        whereHelperint{field: "\"retrievals\".\"id\""},
-	NodeID:    whereHelperint{field: "\"retrievals\".\"node_id\""},
-	RTSize:    whereHelperint{field: "\"retrievals\".\"rt_size\""},
-	Duration:  whereHelperfloat64{field: "\"retrievals\".\"duration\""},
-	Cid:       whereHelperstring{field: "\"retrievals\".\"cid\""},
-	Error:     whereHelpernull_String{field: "\"retrievals\".\"error\""},
-	CreatedAt: whereHelpertime_Time{field: "\"retrievals\".\"created_at\""},
+	ID:        whereHelperint{field: "\"retrievals_ecs\".\"id\""},
+	NodeID:    whereHelperint{field: "\"retrievals_ecs\".\"node_id\""},
+	RTSize:    whereHelperint{field: "\"retrievals_ecs\".\"rt_size\""},
+	Duration:  whereHelperfloat64{field: "\"retrievals_ecs\".\"duration\""},
+	Cid:       whereHelperstring{field: "\"retrievals_ecs\".\"cid\""},
+	Error:     whereHelpernull_String{field: "\"retrievals_ecs\".\"error\""},
+	CreatedAt: whereHelpertime_Time{field: "\"retrievals_ecs\".\"created_at\""},
 }
 
 // RetrievalRels is where relationship names are stored.
@@ -344,7 +344,7 @@ func (q retrievalQuery) One(ctx context.Context, exec boil.ContextExecutor) (*Re
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: failed to execute a one query for retrievals")
+		return nil, errors.Wrap(err, "models: failed to execute a one query for retrievals_ecs")
 	}
 
 	if err := o.doAfterSelectHooks(ctx, exec); err != nil {
@@ -383,7 +383,7 @@ func (q retrievalQuery) Count(ctx context.Context, exec boil.ContextExecutor) (i
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to count retrievals rows")
+		return 0, errors.Wrap(err, "models: failed to count retrievals_ecs rows")
 	}
 
 	return count, nil
@@ -399,7 +399,7 @@ func (q retrievalQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return false, errors.Wrap(err, "models: failed to check if retrievals exists")
+		return false, errors.Wrap(err, "models: failed to check if retrievals_ecs exists")
 	}
 
 	return count > 0, nil
@@ -474,8 +474,8 @@ func (retrievalL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular
 	}
 
 	query := NewQuery(
-		qm.From(`nodes`),
-		qm.WhereIn(`nodes.id in ?`, args...),
+		qm.From(`nodes_ecs`),
+		qm.WhereIn(`nodes_ecs.id in ?`, args...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -492,10 +492,10 @@ func (retrievalL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for nodes")
+		return errors.Wrap(err, "failed to close results of eager load for nodes_ecs")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for nodes")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for nodes_ecs")
 	}
 
 	if len(nodeAfterSelectHooks) != 0 {
@@ -516,7 +516,7 @@ func (retrievalL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular
 		if foreign.R == nil {
 			foreign.R = &nodeR{}
 		}
-		foreign.R.Retrievals = append(foreign.R.Retrievals, object)
+		foreign.R.NodeRetrievalsEcs = append(foreign.R.NodeRetrievalsEcs, object)
 		return nil
 	}
 
@@ -527,7 +527,7 @@ func (retrievalL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular
 				if foreign.R == nil {
 					foreign.R = &nodeR{}
 				}
-				foreign.R.Retrievals = append(foreign.R.Retrievals, local)
+				foreign.R.NodeRetrievalsEcs = append(foreign.R.NodeRetrievalsEcs, local)
 				break
 			}
 		}
@@ -538,7 +538,7 @@ func (retrievalL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular
 
 // SetNode of the retrieval to the related item.
 // Sets o.R.Node to related.
-// Adds o to related.R.Retrievals.
+// Adds o to related.R.NodeRetrievalsEcs.
 func (o *Retrieval) SetNode(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Node) error {
 	var err error
 	if insert {
@@ -548,7 +548,7 @@ func (o *Retrieval) SetNode(ctx context.Context, exec boil.ContextExecutor, inse
 	}
 
 	updateQuery := fmt.Sprintf(
-		"UPDATE \"retrievals\" SET %s WHERE %s",
+		"UPDATE \"retrievals_ecs\" SET %s WHERE %s",
 		strmangle.SetParamNames("\"", "\"", 1, []string{"node_id"}),
 		strmangle.WhereClause("\"", "\"", 2, retrievalPrimaryKeyColumns),
 	)
@@ -574,10 +574,10 @@ func (o *Retrieval) SetNode(ctx context.Context, exec boil.ContextExecutor, inse
 
 	if related.R == nil {
 		related.R = &nodeR{
-			Retrievals: RetrievalSlice{o},
+			NodeRetrievalsEcs: RetrievalSlice{o},
 		}
 	} else {
-		related.R.Retrievals = append(related.R.Retrievals, o)
+		related.R.NodeRetrievalsEcs = append(related.R.NodeRetrievalsEcs, o)
 	}
 
 	return nil
@@ -585,10 +585,10 @@ func (o *Retrieval) SetNode(ctx context.Context, exec boil.ContextExecutor, inse
 
 // Retrievals retrieves all the records using an executor.
 func Retrievals(mods ...qm.QueryMod) retrievalQuery {
-	mods = append(mods, qm.From("\"retrievals\""))
+	mods = append(mods, qm.From("\"retrievals_ecs\""))
 	q := NewQuery(mods...)
 	if len(queries.GetSelect(q)) == 0 {
-		queries.SetSelect(q, []string{"\"retrievals\".*"})
+		queries.SetSelect(q, []string{"\"retrievals_ecs\".*"})
 	}
 
 	return retrievalQuery{q}
@@ -604,7 +604,7 @@ func FindRetrieval(ctx context.Context, exec boil.ContextExecutor, iD int, selec
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"retrievals\" where \"id\"=$1", sel,
+		"select %s from \"retrievals_ecs\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -614,7 +614,7 @@ func FindRetrieval(ctx context.Context, exec boil.ContextExecutor, iD int, selec
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: unable to select from retrievals")
+		return nil, errors.Wrap(err, "models: unable to select from retrievals_ecs")
 	}
 
 	if err = retrievalObj.doAfterSelectHooks(ctx, exec); err != nil {
@@ -628,7 +628,7 @@ func FindRetrieval(ctx context.Context, exec boil.ContextExecutor, iD int, selec
 // See boil.Columns.InsertColumnSet documentation to understand column list inference for inserts.
 func (o *Retrieval) Insert(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no retrievals provided for insertion")
+		return errors.New("models: no retrievals_ecs provided for insertion")
 	}
 
 	var err error
@@ -669,9 +669,9 @@ func (o *Retrieval) Insert(ctx context.Context, exec boil.ContextExecutor, colum
 			return err
 		}
 		if len(wl) != 0 {
-			cache.query = fmt.Sprintf("INSERT INTO \"retrievals\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
+			cache.query = fmt.Sprintf("INSERT INTO \"retrievals_ecs\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
 		} else {
-			cache.query = "INSERT INTO \"retrievals\" %sDEFAULT VALUES%s"
+			cache.query = "INSERT INTO \"retrievals_ecs\" %sDEFAULT VALUES%s"
 		}
 
 		var queryOutput, queryReturning string
@@ -699,7 +699,7 @@ func (o *Retrieval) Insert(ctx context.Context, exec boil.ContextExecutor, colum
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "models: unable to insert into retrievals")
+		return errors.Wrap(err, "models: unable to insert into retrievals_ecs")
 	}
 
 	if !cached {
@@ -735,10 +735,10 @@ func (o *Retrieval) Update(ctx context.Context, exec boil.ContextExecutor, colum
 			wl = strmangle.SetComplement(wl, []string{"created_at"})
 		}
 		if len(wl) == 0 {
-			return 0, errors.New("models: unable to update retrievals, could not build whitelist")
+			return 0, errors.New("models: unable to update retrievals_ecs, could not build whitelist")
 		}
 
-		cache.query = fmt.Sprintf("UPDATE \"retrievals\" SET %s WHERE %s",
+		cache.query = fmt.Sprintf("UPDATE \"retrievals_ecs\" SET %s WHERE %s",
 			strmangle.SetParamNames("\"", "\"", 1, wl),
 			strmangle.WhereClause("\"", "\"", len(wl)+1, retrievalPrimaryKeyColumns),
 		)
@@ -758,12 +758,12 @@ func (o *Retrieval) Update(ctx context.Context, exec boil.ContextExecutor, colum
 	var result sql.Result
 	result, err = exec.ExecContext(ctx, cache.query, values...)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to update retrievals row")
+		return 0, errors.Wrap(err, "models: unable to update retrievals_ecs row")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by update for retrievals")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by update for retrievals_ecs")
 	}
 
 	if !cached {
@@ -781,12 +781,12 @@ func (q retrievalQuery) UpdateAll(ctx context.Context, exec boil.ContextExecutor
 
 	result, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to update all for retrievals")
+		return 0, errors.Wrap(err, "models: unable to update all for retrievals_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to retrieve rows affected for retrievals")
+		return 0, errors.Wrap(err, "models: unable to retrieve rows affected for retrievals_ecs")
 	}
 
 	return rowsAff, nil
@@ -819,7 +819,7 @@ func (o RetrievalSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := fmt.Sprintf("UPDATE \"retrievals\" SET %s WHERE %s",
+	sql := fmt.Sprintf("UPDATE \"retrievals_ecs\" SET %s WHERE %s",
 		strmangle.SetParamNames("\"", "\"", 1, colNames),
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, retrievalPrimaryKeyColumns, len(o)))
 
@@ -844,7 +844,7 @@ func (o RetrievalSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor
 // See boil.Columns documentation for how to properly use updateColumns and insertColumns.
 func (o *Retrieval) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no retrievals provided for upsert")
+		return errors.New("models: no retrievals_ecs provided for upsert")
 	}
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
@@ -911,7 +911,7 @@ func (o *Retrieval) Upsert(ctx context.Context, exec boil.ContextExecutor, updat
 		update = strmangle.SetComplement(update, retrievalGeneratedColumns)
 
 		if updateOnConflict && len(update) == 0 {
-			return errors.New("models: unable to upsert retrievals, could not build update column list")
+			return errors.New("models: unable to upsert retrievals_ecs, could not build update column list")
 		}
 
 		conflict := conflictColumns
@@ -919,7 +919,7 @@ func (o *Retrieval) Upsert(ctx context.Context, exec boil.ContextExecutor, updat
 			conflict = make([]string, len(retrievalPrimaryKeyColumns))
 			copy(conflict, retrievalPrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQueryPostgres(dialect, "\"retrievals\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"retrievals_ecs\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(retrievalType, retrievalMapping, insert)
 		if err != nil {
@@ -954,7 +954,7 @@ func (o *Retrieval) Upsert(ctx context.Context, exec boil.ContextExecutor, updat
 		_, err = exec.ExecContext(ctx, cache.query, vals...)
 	}
 	if err != nil {
-		return errors.Wrap(err, "models: unable to upsert retrievals")
+		return errors.Wrap(err, "models: unable to upsert retrievals_ecs")
 	}
 
 	if !cached {
@@ -978,7 +978,7 @@ func (o *Retrieval) Delete(ctx context.Context, exec boil.ContextExecutor) (int6
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), retrievalPrimaryKeyMapping)
-	sql := "DELETE FROM \"retrievals\" WHERE \"id\"=$1"
+	sql := "DELETE FROM \"retrievals_ecs\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -987,12 +987,12 @@ func (o *Retrieval) Delete(ctx context.Context, exec boil.ContextExecutor) (int6
 	}
 	result, err := exec.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to delete from retrievals")
+		return 0, errors.Wrap(err, "models: unable to delete from retrievals_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by delete for retrievals")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by delete for retrievals_ecs")
 	}
 
 	if err := o.doAfterDeleteHooks(ctx, exec); err != nil {
@@ -1012,12 +1012,12 @@ func (q retrievalQuery) DeleteAll(ctx context.Context, exec boil.ContextExecutor
 
 	result, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to delete all from retrievals")
+		return 0, errors.Wrap(err, "models: unable to delete all from retrievals_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for retrievals")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for retrievals_ecs")
 	}
 
 	return rowsAff, nil
@@ -1043,7 +1043,7 @@ func (o RetrievalSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "DELETE FROM \"retrievals\" WHERE " +
+	sql := "DELETE FROM \"retrievals_ecs\" WHERE " +
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, retrievalPrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
@@ -1058,7 +1058,7 @@ func (o RetrievalSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for retrievals")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for retrievals_ecs")
 	}
 
 	if len(retrievalAfterDeleteHooks) != 0 {
@@ -1098,7 +1098,7 @@ func (o *RetrievalSlice) ReloadAll(ctx context.Context, exec boil.ContextExecuto
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "SELECT \"retrievals\".* FROM \"retrievals\" WHERE " +
+	sql := "SELECT \"retrievals_ecs\".* FROM \"retrievals_ecs\" WHERE " +
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, retrievalPrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
@@ -1116,7 +1116,7 @@ func (o *RetrievalSlice) ReloadAll(ctx context.Context, exec boil.ContextExecuto
 // RetrievalExists checks if the Retrieval row exists.
 func RetrievalExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"retrievals\" where \"id\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"retrievals_ecs\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1127,7 +1127,7 @@ func RetrievalExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bo
 
 	err := row.Scan(&exists)
 	if err != nil {
-		return false, errors.Wrap(err, "models: unable to check if retrievals exists")
+		return false, errors.Wrap(err, "models: unable to check if retrievals_ecs exists")
 	}
 
 	return exists, nil

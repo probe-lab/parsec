@@ -1,31 +1,6 @@
 BEGIN;
 
-ALTER TABLE runs
-    RENAME TO clustertest_runs;
-
-ALTER TABLE nodes
-    RENAME TO clustertest_nodes;
-
-ALTER TABLE clustertest_nodes
-    RENAME CONSTRAINT fk_nodes_run_id TO fk_clustertest_nodes_run_id;
-
-ALTER TABLE retrievals
-    RENAME TO clustertest_retrievals;
-
-ALTER TABLE clustertest_retrievals
-    RENAME CONSTRAINT fk_retrievals_node TO fk_clustertest_retrievals_node_id;
-
-ALTER INDEX idx_retrievals_created_at RENAME TO idx_clustertest_retrievals_created_at;
-
-ALTER TABLE provides
-    RENAME TO clustertest_provides;
-
-ALTER TABLE clustertest_provides
-    RENAME CONSTRAINT fk_provides_node TO fk_clustertest_provides_node_id;
-
-ALTER INDEX idx_provides_created_at RENAME TO idx_clustertest_provides_created_at;
-
-CREATE TABLE nodes
+CREATE TABLE nodes_ecs
 (
     id             INT GENERATED ALWAYS AS IDENTITY,
     cpu            INT         NOT NULL,
@@ -46,7 +21,7 @@ CREATE TABLE nodes
     PRIMARY KEY (id)
 );
 
-CREATE TABLE retrievals
+CREATE TABLE retrievals_ecs
 (
     id         INT GENERATED ALWAYS AS IDENTITY,
     node_id    INT         NOT NULL,
@@ -56,14 +31,15 @@ CREATE TABLE retrievals
     error      TEXT,
     created_at TIMESTAMPTZ NOT NULL,
 
-    CONSTRAINT fk_retrievals_node_id
+    CONSTRAINT fk_retrievals_ecs_node_id
         FOREIGN KEY (node_id)
-            REFERENCES nodes (id),
+            REFERENCES nodes_ecs (id)
+            ON DELETE CASCADE,
 
     PRIMARY KEY (id)
 );
 
-CREATE TABLE provides
+CREATE TABLE provides_ecs
 (
     id         INT GENERATED ALWAYS AS IDENTITY,
     node_id    INT         NOT NULL,
@@ -73,15 +49,16 @@ CREATE TABLE provides
     error      TEXT,
     created_at TIMESTAMPTZ NOT NULL,
 
-    CONSTRAINT fk_provides_node_id
+    CONSTRAINT fk_provides_ecs_node_id
         FOREIGN KEY (node_id)
-            REFERENCES nodes (id),
+            REFERENCES nodes_ecs (id)
+            ON DELETE CASCADE,
 
     PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_provides_created_at ON provides (created_at);
+CREATE INDEX idx_provides_ecs_created_at ON provides_ecs (created_at);
 
-CREATE INDEX idx_retrievals_created_at ON retrievals (created_at);
+CREATE INDEX idx_retrievals_ecs_created_at ON retrievals_ecs (created_at);
 
 COMMIT;

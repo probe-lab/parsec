@@ -8,4 +8,22 @@ port = 5435
 user = "parsec"
 pass = "password"
 sslmode = "disable"
-blacklist = ["schema_migrations", "clustertest_runs", "clustertest_nodes", "clustertest_retrievals", "clustertest_provides"]
+blacklist = ["schema_migrations", "runs", "nodes", "retrievals", "provides"]
+
+[aliases.tables.nodes_ecs]
+up_plural     = "Nodes"
+up_singular   = "Node"
+down_plural   = "nodes"
+down_singular = "node"
+
+[aliases.tables.retrievals_ecs]
+up_plural     = "Retrievals"
+up_singular   = "Retrieval"
+down_plural   = "retrievals"
+down_singular = "retrieval"
+
+[aliases.tables.provides_ecs]
+up_plural     = "Provides"
+up_singular   = "Provide"
+down_plural   = "provides"
+down_singular = "provide"

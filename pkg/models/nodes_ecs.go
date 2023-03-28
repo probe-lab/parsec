@@ -92,20 +92,20 @@ var NodeTableColumns = struct {
 	OfflineSince  string
 	CreatedAt     string
 }{
-	ID:            "nodes.id",
-	CPU:           "nodes.cpu",
-	Memory:        "nodes.memory",
-	PeerID:        "nodes.peer_id",
-	Region:        "nodes.region",
-	CMD:           "nodes.cmd",
-	Tags:          "nodes.tags",
-	Dependencies:  "nodes.dependencies",
-	IPAddress:     "nodes.ip_address",
-	ServerPort:    "nodes.server_port",
-	PeerPort:      "nodes.peer_port",
-	LastHeartbeat: "nodes.last_heartbeat",
-	OfflineSince:  "nodes.offline_since",
-	CreatedAt:     "nodes.created_at",
+	ID:            "nodes_ecs.id",
+	CPU:           "nodes_ecs.cpu",
+	Memory:        "nodes_ecs.memory",
+	PeerID:        "nodes_ecs.peer_id",
+	Region:        "nodes_ecs.region",
+	CMD:           "nodes_ecs.cmd",
+	Tags:          "nodes_ecs.tags",
+	Dependencies:  "nodes_ecs.dependencies",
+	IPAddress:     "nodes_ecs.ip_address",
+	ServerPort:    "nodes_ecs.server_port",
+	PeerPort:      "nodes_ecs.peer_port",
+	LastHeartbeat: "nodes_ecs.last_heartbeat",
+	OfflineSince:  "nodes_ecs.offline_since",
+	CreatedAt:     "nodes_ecs.created_at",
 }
 
 // Generated where
@@ -282,35 +282,35 @@ var NodeWhere = struct {
 	OfflineSince  whereHelpernull_Time
 	CreatedAt     whereHelpertime_Time
 }{
-	ID:            whereHelperint{field: "\"nodes\".\"id\""},
-	CPU:           whereHelperint{field: "\"nodes\".\"cpu\""},
-	Memory:        whereHelperint{field: "\"nodes\".\"memory\""},
-	PeerID:        whereHelperstring{field: "\"nodes\".\"peer_id\""},
-	Region:        whereHelperstring{field: "\"nodes\".\"region\""},
-	CMD:           whereHelperstring{field: "\"nodes\".\"cmd\""},
-	Tags:          whereHelpertypes_StringArray{field: "\"nodes\".\"tags\""},
-	Dependencies:  whereHelpertypes_JSON{field: "\"nodes\".\"dependencies\""},
-	IPAddress:     whereHelperstring{field: "\"nodes\".\"ip_address\""},
-	ServerPort:    whereHelperint16{field: "\"nodes\".\"server_port\""},
-	PeerPort:      whereHelperint16{field: "\"nodes\".\"peer_port\""},
-	LastHeartbeat: whereHelpernull_Time{field: "\"nodes\".\"last_heartbeat\""},
-	OfflineSince:  whereHelpernull_Time{field: "\"nodes\".\"offline_since\""},
-	CreatedAt:     whereHelpertime_Time{field: "\"nodes\".\"created_at\""},
+	ID:            whereHelperint{field: "\"nodes_ecs\".\"id\""},
+	CPU:           whereHelperint{field: "\"nodes_ecs\".\"cpu\""},
+	Memory:        whereHelperint{field: "\"nodes_ecs\".\"memory\""},
+	PeerID:        whereHelperstring{field: "\"nodes_ecs\".\"peer_id\""},
+	Region:        whereHelperstring{field: "\"nodes_ecs\".\"region\""},
+	CMD:           whereHelperstring{field: "\"nodes_ecs\".\"cmd\""},
+	Tags:          whereHelpertypes_StringArray{field: "\"nodes_ecs\".\"tags\""},
+	Dependencies:  whereHelpertypes_JSON{field: "\"nodes_ecs\".\"dependencies\""},
+	IPAddress:     whereHelperstring{field: "\"nodes_ecs\".\"ip_address\""},
+	ServerPort:    whereHelperint16{field: "\"nodes_ecs\".\"server_port\""},
+	PeerPort:      whereHelperint16{field: "\"nodes_ecs\".\"peer_port\""},
+	LastHeartbeat: whereHelpernull_Time{field: "\"nodes_ecs\".\"last_heartbeat\""},
+	OfflineSince:  whereHelpernull_Time{field: "\"nodes_ecs\".\"offline_since\""},
+	CreatedAt:     whereHelpertime_Time{field: "\"nodes_ecs\".\"created_at\""},
 }
 
 // NodeRels is where relationship names are stored.
 var NodeRels = struct {
-	Provides   string
-	Retrievals string
+	NodeProvidesEcs   string
+	NodeRetrievalsEcs string
 }{
-	Provides:   "Provides",
-	Retrievals: "Retrievals",
+	NodeProvidesEcs:   "NodeProvidesEcs",
+	NodeRetrievalsEcs: "NodeRetrievalsEcs",
 }
 
 // nodeR is where relationships are stored.
 type nodeR struct {
-	Provides   ProvideSlice   `boil:"Provides" json:"Provides" toml:"Provides" yaml:"Provides"`
-	Retrievals RetrievalSlice `boil:"Retrievals" json:"Retrievals" toml:"Retrievals" yaml:"Retrievals"`
+	NodeProvidesEcs   ProvideSlice   `boil:"NodeProvidesEcs" json:"NodeProvidesEcs" toml:"NodeProvidesEcs" yaml:"NodeProvidesEcs"`
+	NodeRetrievalsEcs RetrievalSlice `boil:"NodeRetrievalsEcs" json:"NodeRetrievalsEcs" toml:"NodeRetrievalsEcs" yaml:"NodeRetrievalsEcs"`
 }
 
 // NewStruct creates a new relationship struct
@@ -318,18 +318,18 @@ func (*nodeR) NewStruct() *nodeR {
 	return &nodeR{}
 }
 
-func (r *nodeR) GetProvides() ProvideSlice {
+func (r *nodeR) GetNodeProvidesEcs() ProvideSlice {
 	if r == nil {
 		return nil
 	}
-	return r.Provides
+	return r.NodeProvidesEcs
 }
 
-func (r *nodeR) GetRetrievals() RetrievalSlice {
+func (r *nodeR) GetNodeRetrievalsEcs() RetrievalSlice {
 	if r == nil {
 		return nil
 	}
-	return r.Retrievals
+	return r.NodeRetrievalsEcs
 }
 
 // nodeL is where Load methods for each relationship are stored.
@@ -560,7 +560,7 @@ func (q nodeQuery) One(ctx context.Context, exec boil.ContextExecutor) (*Node, e
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: failed to execute a one query for nodes")
+		return nil, errors.Wrap(err, "models: failed to execute a one query for nodes_ecs")
 	}
 
 	if err := o.doAfterSelectHooks(ctx, exec); err != nil {
@@ -599,7 +599,7 @@ func (q nodeQuery) Count(ctx context.Context, exec boil.ContextExecutor) (int64,
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to count nodes rows")
+		return 0, errors.Wrap(err, "models: failed to count nodes_ecs rows")
 	}
 
 	return count, nil
@@ -615,43 +615,43 @@ func (q nodeQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return false, errors.Wrap(err, "models: failed to check if nodes exists")
+		return false, errors.Wrap(err, "models: failed to check if nodes_ecs exists")
 	}
 
 	return count > 0, nil
 }
 
-// Provides retrieves all the provide's Provides with an executor.
-func (o *Node) Provides(mods ...qm.QueryMod) provideQuery {
+// NodeProvidesEcs retrieves all the provides_ec's Provides with an executor via node_id column.
+func (o *Node) NodeProvidesEcs(mods ...qm.QueryMod) provideQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
 	}
 
 	queryMods = append(queryMods,
-		qm.Where("\"provides\".\"node_id\"=?", o.ID),
+		qm.Where("\"provides_ecs\".\"node_id\"=?", o.ID),
 	)
 
 	return Provides(queryMods...)
 }
 
-// Retrievals retrieves all the retrieval's Retrievals with an executor.
-func (o *Node) Retrievals(mods ...qm.QueryMod) retrievalQuery {
+// NodeRetrievalsEcs retrieves all the retrievals_ec's Retrievals with an executor via node_id column.
+func (o *Node) NodeRetrievalsEcs(mods ...qm.QueryMod) retrievalQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
 	}
 
 	queryMods = append(queryMods,
-		qm.Where("\"retrievals\".\"node_id\"=?", o.ID),
+		qm.Where("\"retrievals_ecs\".\"node_id\"=?", o.ID),
 	)
 
 	return Retrievals(queryMods...)
 }
 
-// LoadProvides allows an eager lookup of values, cached into the
+// LoadNodeProvidesEcs allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (nodeL) LoadProvides(ctx context.Context, e boil.ContextExecutor, singular bool, maybeNode interface{}, mods queries.Applicator) error {
+func (nodeL) LoadNodeProvidesEcs(ctx context.Context, e boil.ContextExecutor, singular bool, maybeNode interface{}, mods queries.Applicator) error {
 	var slice []*Node
 	var object *Node
 
@@ -705,8 +705,8 @@ func (nodeL) LoadProvides(ctx context.Context, e boil.ContextExecutor, singular 
 	}
 
 	query := NewQuery(
-		qm.From(`provides`),
-		qm.WhereIn(`provides.node_id in ?`, args...),
+		qm.From(`provides_ecs`),
+		qm.WhereIn(`provides_ecs.node_id in ?`, args...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -714,19 +714,19 @@ func (nodeL) LoadProvides(ctx context.Context, e boil.ContextExecutor, singular 
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load provides")
+		return errors.Wrap(err, "failed to eager load provides_ecs")
 	}
 
 	var resultSlice []*Provide
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice provides")
+		return errors.Wrap(err, "failed to bind eager loaded slice provides_ecs")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on provides")
+		return errors.Wrap(err, "failed to close results in eager load on provides_ecs")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for provides")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for provides_ecs")
 	}
 
 	if len(provideAfterSelectHooks) != 0 {
@@ -737,7 +737,7 @@ func (nodeL) LoadProvides(ctx context.Context, e boil.ContextExecutor, singular 
 		}
 	}
 	if singular {
-		object.R.Provides = resultSlice
+		object.R.NodeProvidesEcs = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
 				foreign.R = &provideR{}
@@ -750,7 +750,7 @@ func (nodeL) LoadProvides(ctx context.Context, e boil.ContextExecutor, singular 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
 			if local.ID == foreign.NodeID {
-				local.R.Provides = append(local.R.Provides, foreign)
+				local.R.NodeProvidesEcs = append(local.R.NodeProvidesEcs, foreign)
 				if foreign.R == nil {
 					foreign.R = &provideR{}
 				}
@@ -763,9 +763,9 @@ func (nodeL) LoadProvides(ctx context.Context, e boil.ContextExecutor, singular 
 	return nil
 }
 
-// LoadRetrievals allows an eager lookup of values, cached into the
+// LoadNodeRetrievalsEcs allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (nodeL) LoadRetrievals(ctx context.Context, e boil.ContextExecutor, singular bool, maybeNode interface{}, mods queries.Applicator) error {
+func (nodeL) LoadNodeRetrievalsEcs(ctx context.Context, e boil.ContextExecutor, singular bool, maybeNode interface{}, mods queries.Applicator) error {
 	var slice []*Node
 	var object *Node
 
@@ -819,8 +819,8 @@ func (nodeL) LoadRetrievals(ctx context.Context, e boil.ContextExecutor, singula
 	}
 
 	query := NewQuery(
-		qm.From(`retrievals`),
-		qm.WhereIn(`retrievals.node_id in ?`, args...),
+		qm.From(`retrievals_ecs`),
+		qm.WhereIn(`retrievals_ecs.node_id in ?`, args...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -828,19 +828,19 @@ func (nodeL) LoadRetrievals(ctx context.Context, e boil.ContextExecutor, singula
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load retrievals")
+		return errors.Wrap(err, "failed to eager load retrievals_ecs")
 	}
 
 	var resultSlice []*Retrieval
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice retrievals")
+		return errors.Wrap(err, "failed to bind eager loaded slice retrievals_ecs")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on retrievals")
+		return errors.Wrap(err, "failed to close results in eager load on retrievals_ecs")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for retrievals")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for retrievals_ecs")
 	}
 
 	if len(retrievalAfterSelectHooks) != 0 {
@@ -851,7 +851,7 @@ func (nodeL) LoadRetrievals(ctx context.Context, e boil.ContextExecutor, singula
 		}
 	}
 	if singular {
-		object.R.Retrievals = resultSlice
+		object.R.NodeRetrievalsEcs = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
 				foreign.R = &retrievalR{}
@@ -864,7 +864,7 @@ func (nodeL) LoadRetrievals(ctx context.Context, e boil.ContextExecutor, singula
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
 			if local.ID == foreign.NodeID {
-				local.R.Retrievals = append(local.R.Retrievals, foreign)
+				local.R.NodeRetrievalsEcs = append(local.R.NodeRetrievalsEcs, foreign)
 				if foreign.R == nil {
 					foreign.R = &retrievalR{}
 				}
@@ -877,11 +877,11 @@ func (nodeL) LoadRetrievals(ctx context.Context, e boil.ContextExecutor, singula
 	return nil
 }
 
-// AddProvides adds the given related objects to the existing relationships
-// of the node, optionally inserting them as new records.
-// Appends related to o.R.Provides.
+// AddNodeProvidesEcs adds the given related objects to the existing relationships
+// of the nodes_ec, optionally inserting them as new records.
+// Appends related to o.R.NodeProvidesEcs.
 // Sets related.R.Node appropriately.
-func (o *Node) AddProvides(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Provide) error {
+func (o *Node) AddNodeProvidesEcs(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Provide) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -891,7 +891,7 @@ func (o *Node) AddProvides(ctx context.Context, exec boil.ContextExecutor, inser
 			}
 		} else {
 			updateQuery := fmt.Sprintf(
-				"UPDATE \"provides\" SET %s WHERE %s",
+				"UPDATE \"provides_ecs\" SET %s WHERE %s",
 				strmangle.SetParamNames("\"", "\"", 1, []string{"node_id"}),
 				strmangle.WhereClause("\"", "\"", 2, providePrimaryKeyColumns),
 			)
@@ -912,10 +912,10 @@ func (o *Node) AddProvides(ctx context.Context, exec boil.ContextExecutor, inser
 
 	if o.R == nil {
 		o.R = &nodeR{
-			Provides: related,
+			NodeProvidesEcs: related,
 		}
 	} else {
-		o.R.Provides = append(o.R.Provides, related...)
+		o.R.NodeProvidesEcs = append(o.R.NodeProvidesEcs, related...)
 	}
 
 	for _, rel := range related {
@@ -930,11 +930,11 @@ func (o *Node) AddProvides(ctx context.Context, exec boil.ContextExecutor, inser
 	return nil
 }
 
-// AddRetrievals adds the given related objects to the existing relationships
-// of the node, optionally inserting them as new records.
-// Appends related to o.R.Retrievals.
+// AddNodeRetrievalsEcs adds the given related objects to the existing relationships
+// of the nodes_ec, optionally inserting them as new records.
+// Appends related to o.R.NodeRetrievalsEcs.
 // Sets related.R.Node appropriately.
-func (o *Node) AddRetrievals(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Retrieval) error {
+func (o *Node) AddNodeRetrievalsEcs(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Retrieval) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -944,7 +944,7 @@ func (o *Node) AddRetrievals(ctx context.Context, exec boil.ContextExecutor, ins
 			}
 		} else {
 			updateQuery := fmt.Sprintf(
-				"UPDATE \"retrievals\" SET %s WHERE %s",
+				"UPDATE \"retrievals_ecs\" SET %s WHERE %s",
 				strmangle.SetParamNames("\"", "\"", 1, []string{"node_id"}),
 				strmangle.WhereClause("\"", "\"", 2, retrievalPrimaryKeyColumns),
 			)
@@ -965,10 +965,10 @@ func (o *Node) AddRetrievals(ctx context.Context, exec boil.ContextExecutor, ins
 
 	if o.R == nil {
 		o.R = &nodeR{
-			Retrievals: related,
+			NodeRetrievalsEcs: related,
 		}
 	} else {
-		o.R.Retrievals = append(o.R.Retrievals, related...)
+		o.R.NodeRetrievalsEcs = append(o.R.NodeRetrievalsEcs, related...)
 	}
 
 	for _, rel := range related {
@@ -985,10 +985,10 @@ func (o *Node) AddRetrievals(ctx context.Context, exec boil.ContextExecutor, ins
 
 // Nodes retrieves all the records using an executor.
 func Nodes(mods ...qm.QueryMod) nodeQuery {
-	mods = append(mods, qm.From("\"nodes\""))
+	mods = append(mods, qm.From("\"nodes_ecs\""))
 	q := NewQuery(mods...)
 	if len(queries.GetSelect(q)) == 0 {
-		queries.SetSelect(q, []string{"\"nodes\".*"})
+		queries.SetSelect(q, []string{"\"nodes_ecs\".*"})
 	}
 
 	return nodeQuery{q}
@@ -1004,7 +1004,7 @@ func FindNode(ctx context.Context, exec boil.ContextExecutor, iD int, selectCols
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"nodes\" where \"id\"=$1", sel,
+		"select %s from \"nodes_ecs\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -1014,7 +1014,7 @@ func FindNode(ctx context.Context, exec boil.ContextExecutor, iD int, selectCols
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: unable to select from nodes")
+		return nil, errors.Wrap(err, "models: unable to select from nodes_ecs")
 	}
 
 	if err = nodeObj.doAfterSelectHooks(ctx, exec); err != nil {
@@ -1028,7 +1028,7 @@ func FindNode(ctx context.Context, exec boil.ContextExecutor, iD int, selectCols
 // See boil.Columns.InsertColumnSet documentation to understand column list inference for inserts.
 func (o *Node) Insert(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no nodes provided for insertion")
+		return errors.New("models: no nodes_ecs provided for insertion")
 	}
 
 	var err error
@@ -1069,9 +1069,9 @@ func (o *Node) Insert(ctx context.Context, exec boil.ContextExecutor, columns bo
 			return err
 		}
 		if len(wl) != 0 {
-			cache.query = fmt.Sprintf("INSERT INTO \"nodes\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
+			cache.query = fmt.Sprintf("INSERT INTO \"nodes_ecs\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
 		} else {
-			cache.query = "INSERT INTO \"nodes\" %sDEFAULT VALUES%s"
+			cache.query = "INSERT INTO \"nodes_ecs\" %sDEFAULT VALUES%s"
 		}
 
 		var queryOutput, queryReturning string
@@ -1099,7 +1099,7 @@ func (o *Node) Insert(ctx context.Context, exec boil.ContextExecutor, columns bo
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "models: unable to insert into nodes")
+		return errors.Wrap(err, "models: unable to insert into nodes_ecs")
 	}
 
 	if !cached {
@@ -1135,10 +1135,10 @@ func (o *Node) Update(ctx context.Context, exec boil.ContextExecutor, columns bo
 			wl = strmangle.SetComplement(wl, []string{"created_at"})
 		}
 		if len(wl) == 0 {
-			return 0, errors.New("models: unable to update nodes, could not build whitelist")
+			return 0, errors.New("models: unable to update nodes_ecs, could not build whitelist")
 		}
 
-		cache.query = fmt.Sprintf("UPDATE \"nodes\" SET %s WHERE %s",
+		cache.query = fmt.Sprintf("UPDATE \"nodes_ecs\" SET %s WHERE %s",
 			strmangle.SetParamNames("\"", "\"", 1, wl),
 			strmangle.WhereClause("\"", "\"", len(wl)+1, nodePrimaryKeyColumns),
 		)
@@ -1158,12 +1158,12 @@ func (o *Node) Update(ctx context.Context, exec boil.ContextExecutor, columns bo
 	var result sql.Result
 	result, err = exec.ExecContext(ctx, cache.query, values...)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to update nodes row")
+		return 0, errors.Wrap(err, "models: unable to update nodes_ecs row")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by update for nodes")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by update for nodes_ecs")
 	}
 
 	if !cached {
@@ -1181,12 +1181,12 @@ func (q nodeQuery) UpdateAll(ctx context.Context, exec boil.ContextExecutor, col
 
 	result, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to update all for nodes")
+		return 0, errors.Wrap(err, "models: unable to update all for nodes_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to retrieve rows affected for nodes")
+		return 0, errors.Wrap(err, "models: unable to retrieve rows affected for nodes_ecs")
 	}
 
 	return rowsAff, nil
@@ -1219,7 +1219,7 @@ func (o NodeSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, col
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := fmt.Sprintf("UPDATE \"nodes\" SET %s WHERE %s",
+	sql := fmt.Sprintf("UPDATE \"nodes_ecs\" SET %s WHERE %s",
 		strmangle.SetParamNames("\"", "\"", 1, colNames),
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, nodePrimaryKeyColumns, len(o)))
 
@@ -1244,7 +1244,7 @@ func (o NodeSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, col
 // See boil.Columns documentation for how to properly use updateColumns and insertColumns.
 func (o *Node) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no nodes provided for upsert")
+		return errors.New("models: no nodes_ecs provided for upsert")
 	}
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
@@ -1311,7 +1311,7 @@ func (o *Node) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCo
 		update = strmangle.SetComplement(update, nodeGeneratedColumns)
 
 		if updateOnConflict && len(update) == 0 {
-			return errors.New("models: unable to upsert nodes, could not build update column list")
+			return errors.New("models: unable to upsert nodes_ecs, could not build update column list")
 		}
 
 		conflict := conflictColumns
@@ -1319,7 +1319,7 @@ func (o *Node) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCo
 			conflict = make([]string, len(nodePrimaryKeyColumns))
 			copy(conflict, nodePrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQueryPostgres(dialect, "\"nodes\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"nodes_ecs\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(nodeType, nodeMapping, insert)
 		if err != nil {
@@ -1354,7 +1354,7 @@ func (o *Node) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCo
 		_, err = exec.ExecContext(ctx, cache.query, vals...)
 	}
 	if err != nil {
-		return errors.Wrap(err, "models: unable to upsert nodes")
+		return errors.Wrap(err, "models: unable to upsert nodes_ecs")
 	}
 
 	if !cached {
@@ -1378,7 +1378,7 @@ func (o *Node) Delete(ctx context.Context, exec boil.ContextExecutor) (int64, er
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), nodePrimaryKeyMapping)
-	sql := "DELETE FROM \"nodes\" WHERE \"id\"=$1"
+	sql := "DELETE FROM \"nodes_ecs\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1387,12 +1387,12 @@ func (o *Node) Delete(ctx context.Context, exec boil.ContextExecutor) (int64, er
 	}
 	result, err := exec.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to delete from nodes")
+		return 0, errors.Wrap(err, "models: unable to delete from nodes_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by delete for nodes")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by delete for nodes_ecs")
 	}
 
 	if err := o.doAfterDeleteHooks(ctx, exec); err != nil {
@@ -1412,12 +1412,12 @@ func (q nodeQuery) DeleteAll(ctx context.Context, exec boil.ContextExecutor) (in
 
 	result, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to delete all from nodes")
+		return 0, errors.Wrap(err, "models: unable to delete all from nodes_ecs")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for nodes")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for nodes_ecs")
 	}
 
 	return rowsAff, nil
@@ -1443,7 +1443,7 @@ func (o NodeSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) (in
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "DELETE FROM \"nodes\" WHERE " +
+	sql := "DELETE FROM \"nodes_ecs\" WHERE " +
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, nodePrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
@@ -1458,7 +1458,7 @@ func (o NodeSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) (in
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for nodes")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for nodes_ecs")
 	}
 
 	if len(nodeAfterDeleteHooks) != 0 {
@@ -1498,7 +1498,7 @@ func (o *NodeSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) er
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "SELECT \"nodes\".* FROM \"nodes\" WHERE " +
+	sql := "SELECT \"nodes_ecs\".* FROM \"nodes_ecs\" WHERE " +
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, nodePrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
@@ -1516,7 +1516,7 @@ func (o *NodeSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) er
 // NodeExists checks if the Node row exists.
 func NodeExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"nodes\" where \"id\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"nodes_ecs\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1527,7 +1527,7 @@ func NodeExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool, e
 
 	err := row.Scan(&exists)
 	if err != nil {
-		return false, errors.Wrap(err, "models: unable to check if nodes exists")
+		return false, errors.Wrap(err, "models: unable to check if nodes_ecs exists")
 	}
 
 	return exists, nil
