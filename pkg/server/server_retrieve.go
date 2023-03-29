@@ -55,8 +55,6 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	provider := <-s.host.DHT.FindProvidersAsync(ctx, c, 1)
 	resp.Duration = time.Since(start)
 
-	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(ctx.Err() == nil), r.Header.Get(headerSchedulerID)).Observe(resp.Duration.Seconds())
-
 	logEntry = logEntry.WithField("dur", resp.Duration.Seconds())
 
 	if errors.Is(provider.ID.Validate(), peer.ErrEmptyPeerID) {
@@ -68,6 +66,8 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 		s.host.Peerstore().ClearAddrs(provider.ID)
 		logEntry.WithField("provider", util.FmtPeerID(provider.ID)).Infoln("Found provider")
 	}
+
+	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(resp.Error == ""), r.Header.Get(headerSchedulerID)).Observe(resp.Duration.Seconds())
 
 	data, err = json.Marshal(resp)
 	if err != nil {
