@@ -13,6 +13,8 @@ RUN GOARCH=amd64 GOOS=linux go build -o parsec github.com/dennis-tra/parsec/cmd/
 # Create lightweight container
 FROM alpine:latest
 
+RUN apk add --update curl && rm -rf /var/cache/apk/*
+
 RUN adduser -D -H parsec
 WORKDIR /home/parsec
 USER parsec
