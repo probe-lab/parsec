@@ -24,52 +24,57 @@ import (
 
 // Provide is an object representing the database table.
 type Provide struct {
-	ID        int         `boil:"id" json:"id" toml:"id" yaml:"id"`
-	NodeID    int         `boil:"node_id" json:"node_id" toml:"node_id" yaml:"node_id"`
-	RTSize    int         `boil:"rt_size" json:"rt_size" toml:"rt_size" yaml:"rt_size"`
-	Duration  float64     `boil:"duration" json:"duration" toml:"duration" yaml:"duration"`
-	Cid       string      `boil:"cid" json:"cid" toml:"cid" yaml:"cid"`
-	Error     null.String `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
-	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	ID          int         `boil:"id" json:"id" toml:"id" yaml:"id"`
+	SchedulerID int         `boil:"scheduler_id" json:"scheduler_id" toml:"scheduler_id" yaml:"scheduler_id"`
+	NodeID      int         `boil:"node_id" json:"node_id" toml:"node_id" yaml:"node_id"`
+	RTSize      int         `boil:"rt_size" json:"rt_size" toml:"rt_size" yaml:"rt_size"`
+	Duration    float64     `boil:"duration" json:"duration" toml:"duration" yaml:"duration"`
+	Cid         string      `boil:"cid" json:"cid" toml:"cid" yaml:"cid"`
+	Error       null.String `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
+	CreatedAt   time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *provideR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L provideL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var ProvideColumns = struct {
-	ID        string
-	NodeID    string
-	RTSize    string
-	Duration  string
-	Cid       string
-	Error     string
-	CreatedAt string
+	ID          string
+	SchedulerID string
+	NodeID      string
+	RTSize      string
+	Duration    string
+	Cid         string
+	Error       string
+	CreatedAt   string
 }{
-	ID:        "id",
-	NodeID:    "node_id",
-	RTSize:    "rt_size",
-	Duration:  "duration",
-	Cid:       "cid",
-	Error:     "error",
-	CreatedAt: "created_at",
+	ID:          "id",
+	SchedulerID: "scheduler_id",
+	NodeID:      "node_id",
+	RTSize:      "rt_size",
+	Duration:    "duration",
+	Cid:         "cid",
+	Error:       "error",
+	CreatedAt:   "created_at",
 }
 
 var ProvideTableColumns = struct {
-	ID        string
-	NodeID    string
-	RTSize    string
-	Duration  string
-	Cid       string
-	Error     string
-	CreatedAt string
+	ID          string
+	SchedulerID string
+	NodeID      string
+	RTSize      string
+	Duration    string
+	Cid         string
+	Error       string
+	CreatedAt   string
 }{
-	ID:        "provides_ecs.id",
-	NodeID:    "provides_ecs.node_id",
-	RTSize:    "provides_ecs.rt_size",
-	Duration:  "provides_ecs.duration",
-	Cid:       "provides_ecs.cid",
-	Error:     "provides_ecs.error",
-	CreatedAt: "provides_ecs.created_at",
+	ID:          "provides_ecs.id",
+	SchedulerID: "provides_ecs.scheduler_id",
+	NodeID:      "provides_ecs.node_id",
+	RTSize:      "provides_ecs.rt_size",
+	Duration:    "provides_ecs.duration",
+	Cid:         "provides_ecs.cid",
+	Error:       "provides_ecs.error",
+	CreatedAt:   "provides_ecs.created_at",
 }
 
 // Generated where
@@ -142,33 +147,38 @@ func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereI
 func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
 var ProvideWhere = struct {
-	ID        whereHelperint
-	NodeID    whereHelperint
-	RTSize    whereHelperint
-	Duration  whereHelperfloat64
-	Cid       whereHelperstring
-	Error     whereHelpernull_String
-	CreatedAt whereHelpertime_Time
+	ID          whereHelperint
+	SchedulerID whereHelperint
+	NodeID      whereHelperint
+	RTSize      whereHelperint
+	Duration    whereHelperfloat64
+	Cid         whereHelperstring
+	Error       whereHelpernull_String
+	CreatedAt   whereHelpertime_Time
 }{
-	ID:        whereHelperint{field: "\"provides_ecs\".\"id\""},
-	NodeID:    whereHelperint{field: "\"provides_ecs\".\"node_id\""},
-	RTSize:    whereHelperint{field: "\"provides_ecs\".\"rt_size\""},
-	Duration:  whereHelperfloat64{field: "\"provides_ecs\".\"duration\""},
-	Cid:       whereHelperstring{field: "\"provides_ecs\".\"cid\""},
-	Error:     whereHelpernull_String{field: "\"provides_ecs\".\"error\""},
-	CreatedAt: whereHelpertime_Time{field: "\"provides_ecs\".\"created_at\""},
+	ID:          whereHelperint{field: "\"provides_ecs\".\"id\""},
+	SchedulerID: whereHelperint{field: "\"provides_ecs\".\"scheduler_id\""},
+	NodeID:      whereHelperint{field: "\"provides_ecs\".\"node_id\""},
+	RTSize:      whereHelperint{field: "\"provides_ecs\".\"rt_size\""},
+	Duration:    whereHelperfloat64{field: "\"provides_ecs\".\"duration\""},
+	Cid:         whereHelperstring{field: "\"provides_ecs\".\"cid\""},
+	Error:       whereHelpernull_String{field: "\"provides_ecs\".\"error\""},
+	CreatedAt:   whereHelpertime_Time{field: "\"provides_ecs\".\"created_at\""},
 }
 
 // ProvideRels is where relationship names are stored.
 var ProvideRels = struct {
-	Node string
+	Node      string
+	Scheduler string
 }{
-	Node: "Node",
+	Node:      "Node",
+	Scheduler: "Scheduler",
 }
 
 // provideR is where relationships are stored.
 type provideR struct {
-	Node *Node `boil:"Node" json:"Node" toml:"Node" yaml:"Node"`
+	Node      *Node      `boil:"Node" json:"Node" toml:"Node" yaml:"Node"`
+	Scheduler *Scheduler `boil:"Scheduler" json:"Scheduler" toml:"Scheduler" yaml:"Scheduler"`
 }
 
 // NewStruct creates a new relationship struct
@@ -183,12 +193,19 @@ func (r *provideR) GetNode() *Node {
 	return r.Node
 }
 
+func (r *provideR) GetScheduler() *Scheduler {
+	if r == nil {
+		return nil
+	}
+	return r.Scheduler
+}
+
 // provideL is where Load methods for each relationship are stored.
 type provideL struct{}
 
 var (
-	provideAllColumns            = []string{"id", "node_id", "rt_size", "duration", "cid", "error", "created_at"}
-	provideColumnsWithoutDefault = []string{"node_id", "rt_size", "duration", "cid", "created_at"}
+	provideAllColumns            = []string{"id", "scheduler_id", "node_id", "rt_size", "duration", "cid", "error", "created_at"}
+	provideColumnsWithoutDefault = []string{"scheduler_id", "node_id", "rt_size", "duration", "cid", "created_at"}
 	provideColumnsWithDefault    = []string{"id", "error"}
 	providePrimaryKeyColumns     = []string{"id"}
 	provideGeneratedColumns      = []string{"id"}
@@ -483,6 +500,17 @@ func (o *Provide) Node(mods ...qm.QueryMod) nodeQuery {
 	return Nodes(queryMods...)
 }
 
+// Scheduler pointed to by the foreign key.
+func (o *Provide) Scheduler(mods ...qm.QueryMod) schedulerQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.SchedulerID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return Schedulers(queryMods...)
+}
+
 // LoadNode allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (provideL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular bool, maybeProvide interface{}, mods queries.Applicator) error {
@@ -603,6 +631,126 @@ func (provideL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular b
 	return nil
 }
 
+// LoadScheduler allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (provideL) LoadScheduler(ctx context.Context, e boil.ContextExecutor, singular bool, maybeProvide interface{}, mods queries.Applicator) error {
+	var slice []*Provide
+	var object *Provide
+
+	if singular {
+		var ok bool
+		object, ok = maybeProvide.(*Provide)
+		if !ok {
+			object = new(Provide)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeProvide)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeProvide))
+			}
+		}
+	} else {
+		s, ok := maybeProvide.(*[]*Provide)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeProvide)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeProvide))
+			}
+		}
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &provideR{}
+		}
+		args = append(args, object.SchedulerID)
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &provideR{}
+			}
+
+			for _, a := range args {
+				if a == obj.SchedulerID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.SchedulerID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`schedulers_ecs`),
+		qm.WhereIn(`schedulers_ecs.id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load Scheduler")
+	}
+
+	var resultSlice []*Scheduler
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice Scheduler")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for schedulers_ecs")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for schedulers_ecs")
+	}
+
+	if len(schedulerAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.Scheduler = foreign
+		if foreign.R == nil {
+			foreign.R = &schedulerR{}
+		}
+		foreign.R.SchedulerProvidesEcs = append(foreign.R.SchedulerProvidesEcs, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.SchedulerID == foreign.ID {
+				local.R.Scheduler = foreign
+				if foreign.R == nil {
+					foreign.R = &schedulerR{}
+				}
+				foreign.R.SchedulerProvidesEcs = append(foreign.R.SchedulerProvidesEcs, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetNode of the provide to the related item.
 // Sets o.R.Node to related.
 // Adds o to related.R.NodeProvidesEcs.
@@ -645,6 +793,53 @@ func (o *Provide) SetNode(ctx context.Context, exec boil.ContextExecutor, insert
 		}
 	} else {
 		related.R.NodeProvidesEcs = append(related.R.NodeProvidesEcs, o)
+	}
+
+	return nil
+}
+
+// SetScheduler of the provide to the related item.
+// Sets o.R.Scheduler to related.
+// Adds o to related.R.SchedulerProvidesEcs.
+func (o *Provide) SetScheduler(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Scheduler) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"provides_ecs\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"scheduler_id"}),
+		strmangle.WhereClause("\"", "\"", 2, providePrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.SchedulerID = related.ID
+	if o.R == nil {
+		o.R = &provideR{
+			Scheduler: related,
+		}
+	} else {
+		o.R.Scheduler = related
+	}
+
+	if related.R == nil {
+		related.R = &schedulerR{
+			SchedulerProvidesEcs: ProvideSlice{o},
+		}
+	} else {
+		related.R.SchedulerProvidesEcs = append(related.R.SchedulerProvidesEcs, o)
 	}
 
 	return nil

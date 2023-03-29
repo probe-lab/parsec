@@ -24,84 +24,94 @@ import (
 
 // Retrieval is an object representing the database table.
 type Retrieval struct {
-	ID        int         `boil:"id" json:"id" toml:"id" yaml:"id"`
-	NodeID    int         `boil:"node_id" json:"node_id" toml:"node_id" yaml:"node_id"`
-	RTSize    int         `boil:"rt_size" json:"rt_size" toml:"rt_size" yaml:"rt_size"`
-	Duration  float64     `boil:"duration" json:"duration" toml:"duration" yaml:"duration"`
-	Cid       string      `boil:"cid" json:"cid" toml:"cid" yaml:"cid"`
-	Error     null.String `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
-	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	ID          int         `boil:"id" json:"id" toml:"id" yaml:"id"`
+	SchedulerID int         `boil:"scheduler_id" json:"scheduler_id" toml:"scheduler_id" yaml:"scheduler_id"`
+	NodeID      int         `boil:"node_id" json:"node_id" toml:"node_id" yaml:"node_id"`
+	RTSize      int         `boil:"rt_size" json:"rt_size" toml:"rt_size" yaml:"rt_size"`
+	Duration    float64     `boil:"duration" json:"duration" toml:"duration" yaml:"duration"`
+	Cid         string      `boil:"cid" json:"cid" toml:"cid" yaml:"cid"`
+	Error       null.String `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
+	CreatedAt   time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *retrievalR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L retrievalL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var RetrievalColumns = struct {
-	ID        string
-	NodeID    string
-	RTSize    string
-	Duration  string
-	Cid       string
-	Error     string
-	CreatedAt string
+	ID          string
+	SchedulerID string
+	NodeID      string
+	RTSize      string
+	Duration    string
+	Cid         string
+	Error       string
+	CreatedAt   string
 }{
-	ID:        "id",
-	NodeID:    "node_id",
-	RTSize:    "rt_size",
-	Duration:  "duration",
-	Cid:       "cid",
-	Error:     "error",
-	CreatedAt: "created_at",
+	ID:          "id",
+	SchedulerID: "scheduler_id",
+	NodeID:      "node_id",
+	RTSize:      "rt_size",
+	Duration:    "duration",
+	Cid:         "cid",
+	Error:       "error",
+	CreatedAt:   "created_at",
 }
 
 var RetrievalTableColumns = struct {
-	ID        string
-	NodeID    string
-	RTSize    string
-	Duration  string
-	Cid       string
-	Error     string
-	CreatedAt string
+	ID          string
+	SchedulerID string
+	NodeID      string
+	RTSize      string
+	Duration    string
+	Cid         string
+	Error       string
+	CreatedAt   string
 }{
-	ID:        "retrievals_ecs.id",
-	NodeID:    "retrievals_ecs.node_id",
-	RTSize:    "retrievals_ecs.rt_size",
-	Duration:  "retrievals_ecs.duration",
-	Cid:       "retrievals_ecs.cid",
-	Error:     "retrievals_ecs.error",
-	CreatedAt: "retrievals_ecs.created_at",
+	ID:          "retrievals_ecs.id",
+	SchedulerID: "retrievals_ecs.scheduler_id",
+	NodeID:      "retrievals_ecs.node_id",
+	RTSize:      "retrievals_ecs.rt_size",
+	Duration:    "retrievals_ecs.duration",
+	Cid:         "retrievals_ecs.cid",
+	Error:       "retrievals_ecs.error",
+	CreatedAt:   "retrievals_ecs.created_at",
 }
 
 // Generated where
 
 var RetrievalWhere = struct {
-	ID        whereHelperint
-	NodeID    whereHelperint
-	RTSize    whereHelperint
-	Duration  whereHelperfloat64
-	Cid       whereHelperstring
-	Error     whereHelpernull_String
-	CreatedAt whereHelpertime_Time
+	ID          whereHelperint
+	SchedulerID whereHelperint
+	NodeID      whereHelperint
+	RTSize      whereHelperint
+	Duration    whereHelperfloat64
+	Cid         whereHelperstring
+	Error       whereHelpernull_String
+	CreatedAt   whereHelpertime_Time
 }{
-	ID:        whereHelperint{field: "\"retrievals_ecs\".\"id\""},
-	NodeID:    whereHelperint{field: "\"retrievals_ecs\".\"node_id\""},
-	RTSize:    whereHelperint{field: "\"retrievals_ecs\".\"rt_size\""},
-	Duration:  whereHelperfloat64{field: "\"retrievals_ecs\".\"duration\""},
-	Cid:       whereHelperstring{field: "\"retrievals_ecs\".\"cid\""},
-	Error:     whereHelpernull_String{field: "\"retrievals_ecs\".\"error\""},
-	CreatedAt: whereHelpertime_Time{field: "\"retrievals_ecs\".\"created_at\""},
+	ID:          whereHelperint{field: "\"retrievals_ecs\".\"id\""},
+	SchedulerID: whereHelperint{field: "\"retrievals_ecs\".\"scheduler_id\""},
+	NodeID:      whereHelperint{field: "\"retrievals_ecs\".\"node_id\""},
+	RTSize:      whereHelperint{field: "\"retrievals_ecs\".\"rt_size\""},
+	Duration:    whereHelperfloat64{field: "\"retrievals_ecs\".\"duration\""},
+	Cid:         whereHelperstring{field: "\"retrievals_ecs\".\"cid\""},
+	Error:       whereHelpernull_String{field: "\"retrievals_ecs\".\"error\""},
+	CreatedAt:   whereHelpertime_Time{field: "\"retrievals_ecs\".\"created_at\""},
 }
 
 // RetrievalRels is where relationship names are stored.
 var RetrievalRels = struct {
-	Node string
+	Node      string
+	Scheduler string
 }{
-	Node: "Node",
+	Node:      "Node",
+	Scheduler: "Scheduler",
 }
 
 // retrievalR is where relationships are stored.
 type retrievalR struct {
-	Node *Node `boil:"Node" json:"Node" toml:"Node" yaml:"Node"`
+	Node      *Node      `boil:"Node" json:"Node" toml:"Node" yaml:"Node"`
+	Scheduler *Scheduler `boil:"Scheduler" json:"Scheduler" toml:"Scheduler" yaml:"Scheduler"`
 }
 
 // NewStruct creates a new relationship struct
@@ -116,12 +126,19 @@ func (r *retrievalR) GetNode() *Node {
 	return r.Node
 }
 
+func (r *retrievalR) GetScheduler() *Scheduler {
+	if r == nil {
+		return nil
+	}
+	return r.Scheduler
+}
+
 // retrievalL is where Load methods for each relationship are stored.
 type retrievalL struct{}
 
 var (
-	retrievalAllColumns            = []string{"id", "node_id", "rt_size", "duration", "cid", "error", "created_at"}
-	retrievalColumnsWithoutDefault = []string{"node_id", "rt_size", "duration", "cid", "created_at"}
+	retrievalAllColumns            = []string{"id", "scheduler_id", "node_id", "rt_size", "duration", "cid", "error", "created_at"}
+	retrievalColumnsWithoutDefault = []string{"scheduler_id", "node_id", "rt_size", "duration", "cid", "created_at"}
 	retrievalColumnsWithDefault    = []string{"id", "error"}
 	retrievalPrimaryKeyColumns     = []string{"id"}
 	retrievalGeneratedColumns      = []string{"id"}
@@ -416,6 +433,17 @@ func (o *Retrieval) Node(mods ...qm.QueryMod) nodeQuery {
 	return Nodes(queryMods...)
 }
 
+// Scheduler pointed to by the foreign key.
+func (o *Retrieval) Scheduler(mods ...qm.QueryMod) schedulerQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.SchedulerID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return Schedulers(queryMods...)
+}
+
 // LoadNode allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (retrievalL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular bool, maybeRetrieval interface{}, mods queries.Applicator) error {
@@ -536,6 +564,126 @@ func (retrievalL) LoadNode(ctx context.Context, e boil.ContextExecutor, singular
 	return nil
 }
 
+// LoadScheduler allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (retrievalL) LoadScheduler(ctx context.Context, e boil.ContextExecutor, singular bool, maybeRetrieval interface{}, mods queries.Applicator) error {
+	var slice []*Retrieval
+	var object *Retrieval
+
+	if singular {
+		var ok bool
+		object, ok = maybeRetrieval.(*Retrieval)
+		if !ok {
+			object = new(Retrieval)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeRetrieval)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeRetrieval))
+			}
+		}
+	} else {
+		s, ok := maybeRetrieval.(*[]*Retrieval)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeRetrieval)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeRetrieval))
+			}
+		}
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &retrievalR{}
+		}
+		args = append(args, object.SchedulerID)
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &retrievalR{}
+			}
+
+			for _, a := range args {
+				if a == obj.SchedulerID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.SchedulerID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`schedulers_ecs`),
+		qm.WhereIn(`schedulers_ecs.id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load Scheduler")
+	}
+
+	var resultSlice []*Scheduler
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice Scheduler")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for schedulers_ecs")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for schedulers_ecs")
+	}
+
+	if len(schedulerAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.Scheduler = foreign
+		if foreign.R == nil {
+			foreign.R = &schedulerR{}
+		}
+		foreign.R.SchedulerRetrievalsEcs = append(foreign.R.SchedulerRetrievalsEcs, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.SchedulerID == foreign.ID {
+				local.R.Scheduler = foreign
+				if foreign.R == nil {
+					foreign.R = &schedulerR{}
+				}
+				foreign.R.SchedulerRetrievalsEcs = append(foreign.R.SchedulerRetrievalsEcs, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetNode of the retrieval to the related item.
 // Sets o.R.Node to related.
 // Adds o to related.R.NodeRetrievalsEcs.
@@ -578,6 +726,53 @@ func (o *Retrieval) SetNode(ctx context.Context, exec boil.ContextExecutor, inse
 		}
 	} else {
 		related.R.NodeRetrievalsEcs = append(related.R.NodeRetrievalsEcs, o)
+	}
+
+	return nil
+}
+
+// SetScheduler of the retrieval to the related item.
+// Sets o.R.Scheduler to related.
+// Adds o to related.R.SchedulerRetrievalsEcs.
+func (o *Retrieval) SetScheduler(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Scheduler) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"retrievals_ecs\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"scheduler_id"}),
+		strmangle.WhereClause("\"", "\"", 2, retrievalPrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.SchedulerID = related.ID
+	if o.R == nil {
+		o.R = &retrievalR{
+			Scheduler: related,
+		}
+	} else {
+		o.R.Scheduler = related
+	}
+
+	if related.R == nil {
+		related.R = &schedulerR{
+			SchedulerRetrievalsEcs: RetrievalSlice{o},
+		}
+	} else {
+		related.R.SchedulerRetrievalsEcs = append(related.R.SchedulerRetrievalsEcs, o)
 	}
 
 	return nil

@@ -7,8 +7,10 @@ var TableNames = struct {
 	NodesEcs      string
 	ProvidesEcs   string
 	RetrievalsEcs string
+	SchedulersEcs string
 }{
 	NodesEcs:      "nodes_ecs",
 	ProvidesEcs:   "provides_ecs",
 	RetrievalsEcs: "retrievals_ecs",
+	SchedulersEcs: "schedulers_ecs",
 }

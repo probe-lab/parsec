@@ -10,6 +10,12 @@ pass = "password"
 sslmode = "disable"
 blacklist = ["schema_migrations", "runs", "nodes", "retrievals", "provides"]
 
+[aliases.tables.schedulers_ecs]
+up_plural     = "Schedulers"
+up_singular   = "Scheduler"
+down_plural   = "schedulers"
+down_singular = "scheduler"
+
 [aliases.tables.nodes_ecs]
 up_plural     = "Nodes"
 up_singular   = "Node"

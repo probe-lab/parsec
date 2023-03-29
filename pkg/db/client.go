@@ -30,10 +30,11 @@ import (
 )
 
 type Client interface {
+	InsertScheduler(ctx context.Context, fleets []string) (*models.Scheduler, error)
 	InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error)
-	GetNodes(ctx context.Context, tags []string) (models.NodeSlice, error)
-	InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Retrieval, error)
-	InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Provide, error)
+	GetNodes(ctx context.Context, fleets []string) (models.NodeSlice, error)
+	InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Retrieval, error)
+	InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Provide, error)
 	UpdateHeartbeat(ctx context.Context, dbNode *models.Node) error
 	UpdateOfflineSince(ctx context.Context, dbNode *models.Node) error
 	Close() error
@@ -141,6 +142,25 @@ func (c *DBClient) applyMigrations() error {
 	return nil
 }
 
+func (c *DBClient) InsertScheduler(ctx context.Context, fleets []string) (*models.Scheduler, error) {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return nil, fmt.Errorf("read build info error")
+	}
+
+	biData, err := json.Marshal(bi)
+	if err != nil {
+		return nil, fmt.Errorf("marshal build info data: %w", err)
+	}
+
+	s := &models.Scheduler{
+		Fleets:       fleets,
+		Dependencies: biData,
+	}
+
+	return s, s.Insert(ctx, c.handle, boil.Infer())
+}
+
 func (c *DBClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error) {
 	ecsm, err := c.conf.ECSMetadata()
 	if err != nil {
@@ -165,7 +185,7 @@ func (c *DBClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.S
 		CMD:          strings.Join(os.Args, " "),
 		Dependencies: biData,
 		IPAddress:    ecsm.GetPrivateIP(),
-		Tags:         conf.Tags.Value(),
+		Fleet:        conf.Fleet,
 		ServerPort:   int16(conf.ServerPort),
 		PeerPort:     int16(conf.PeerPort),
 	}
@@ -173,14 +193,11 @@ func (c *DBClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.S
 	return n, n.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) GetNodes(ctx context.Context, tags []string) (models.NodeSlice, error) {
+func (c *DBClient) GetNodes(ctx context.Context, fleets []string) (models.NodeSlice, error) {
 	wheres := []qm.QueryMod{
 		models.NodeWhere.OfflineSince.IsNull(),
 		models.NodeWhere.LastHeartbeat.GTE(null.TimeFrom(time.Now().Add(-2 * time.Minute))),
-	}
-
-	if len(tags) > 0 {
-		wheres = append(wheres, qm.Where(fmt.Sprintf("tags && '{%s}'::TEXT[]", strings.Join(tags, ","))))
+		models.NodeWhere.Fleet.IN(fleets),
 	}
 
 	return models.Nodes(wheres...).All(ctx, c.handle)
@@ -201,25 +218,27 @@ func (c *DBClient) UpdateOfflineSince(ctx context.Context, dbNode *models.Node) 
 	return err
 }
 
-func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Retrieval, error) {
+func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Retrieval, error) {
 	r := &models.Retrieval{
-		Cid:      cid,
-		NodeID:   dbNodeID,
-		Duration: duration,
-		RTSize:   rtSize,
-		Error:    null.NewString(errStr, errStr != ""),
+		Cid:         cid,
+		NodeID:      dbNodeID,
+		Duration:    duration,
+		RTSize:      rtSize,
+		SchedulerID: schedulerID,
+		Error:       null.NewString(errStr, errStr != ""),
 	}
 
 	return r, r.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Provide, error) {
+func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Provide, error) {
 	p := &models.Provide{
-		Cid:      cid,
-		NodeID:   dbNodeID,
-		Duration: duration,
-		RTSize:   rtSize,
-		Error:    null.NewString(errStr, errStr != ""),
+		Cid:         cid,
+		NodeID:      dbNodeID,
+		Duration:    duration,
+		RTSize:      rtSize,
+		SchedulerID: schedulerID,
+		Error:       null.NewString(errStr, errStr != ""),
 	}
 
 	return p, p.Insert(ctx, c.handle, boil.Infer())
@@ -227,7 +246,7 @@ func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, 
 
 type DummyClient struct{}
 
-func (d *DummyClient) GetNodes(ctx context.Context, tags []string) (models.NodeSlice, error) {
+func (d *DummyClient) GetNodes(ctx context.Context, fleets []string) (models.NodeSlice, error) {
 	return []*models.Node{}, nil
 }
 
@@ -235,15 +254,19 @@ func NewDummyClient() Client {
 	return &DummyClient{}
 }
 
+func (d *DummyClient) InsertScheduler(ctx context.Context, fleets []string) (*models.Scheduler, error) {
+	return &models.Scheduler{Fleets: fleets}, nil
+}
+
 func (d *DummyClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error) {
 	return &models.Node{Region: "dummy", PeerID: peerID.String()}, nil
 }
 
-func (d *DummyClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Retrieval, error) {
+func (d *DummyClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Retrieval, error) {
 	return &models.Retrieval{NodeID: dbNodeID}, nil
 }
 
-func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string) (*models.Provide, error) {
+func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Provide, error) {
 	return &models.Provide{NodeID: dbNodeID}, nil
 }
 

@@ -87,22 +87,22 @@ type ServerConfig struct {
 	PeerPort   int
 	FullRT     bool
 	DHTServer  bool
-	Tags       *cli.StringSlice
+	Fleet      string
 }
 
 var Server = ServerConfig{
 	ServerHost: "localhost",
 	ServerPort: 7070,
 	PeerPort:   4001,
-	Tags:       cli.NewStringSlice(),
+	Fleet:      "",
 	FullRT:     false,
 	DHTServer:  false,
 }
 
 type SchedulerConfig struct {
-	Tags *cli.StringSlice
+	Fleets *cli.StringSlice
 }
 
 var Scheduler = SchedulerConfig{
-	Tags: cli.NewStringSlice(),
+	Fleets: cli.NewStringSlice(),
 }

@@ -19,12 +19,12 @@ var SchedulerCommand = &cli.Command{
 	Name: "scheduler",
 	Flags: []cli.Flag{
 		&cli.StringSliceFlag{
-			Name:        "tags",
-			Usage:       "Experiment tags",
-			EnvVars:     []string{"PARSEC_SCHEDULER_TAGS"},
-			DefaultText: config.Scheduler.Tags.String(),
-			Value:       config.Scheduler.Tags,
-			Destination: config.Scheduler.Tags,
+			Name:        "fleets",
+			Usage:       "The fleets to experiment with",
+			EnvVars:     []string{"PARSEC_SCHEDULER_FLEETS"},
+			DefaultText: config.Scheduler.Fleets.String(),
+			Value:       config.Scheduler.Fleets,
+			Destination: config.Scheduler.Fleets,
 		},
 	},
 	Action: SchedulerAction,
@@ -42,6 +42,11 @@ func SchedulerAction(c *cli.Context) error {
 		}
 	}
 
+	dbScheduler, err := dbc.InsertScheduler(c.Context, config.Scheduler.Fleets.Value())
+	if err != nil {
+		return fmt.Errorf("insert scheduler: %w", err)
+	}
+
 	provNodeIdx := 0
 	for {
 		// If context was cancelled stop here
@@ -52,13 +57,13 @@ func SchedulerAction(c *cli.Context) error {
 		}
 
 		// Get all dbNodes from database
-		dbNodes, err := dbc.GetNodes(c.Context, config.Scheduler.Tags.Value())
+		dbNodes, err := dbc.GetNodes(c.Context, config.Scheduler.Fleets.Value())
 		if err != nil {
 			return fmt.Errorf("get nodes: %w", err)
 		}
 
 		if len(dbNodes) < 2 {
-			log.WithField("tags", config.Scheduler.Tags.Value()).Infoln("Less than two nodes in database. Waiting 10s and then trying again...")
+			log.WithField("fleets", config.Scheduler.Fleets.Value()).Infoln("Less than two nodes in database. Waiting 10s and then trying again...")
 			select {
 			case <-time.After(10 * time.Second):
 				continue
@@ -85,7 +90,7 @@ func SchedulerAction(c *cli.Context) error {
 		}
 
 		if len(clients) == 0 {
-			log.WithField("tags", config.Scheduler.Tags.Value()).Infoln("Less than two nodes ready. Waiting 10s and then trying again...")
+			log.WithField("fleets", config.Scheduler.Fleets.Value()).Infoln("Less than two nodes ready. Waiting 10s and then trying again...")
 			select {
 			case <-time.After(10 * time.Second):
 				continue
@@ -115,7 +120,7 @@ func SchedulerAction(c *cli.Context) error {
 			continue
 		}
 
-		if _, err := dbc.InsertProvide(c.Context, providerNode.ID, provide.CID, provide.Duration.Seconds(), provide.RoutingTableSize, provide.Error); err != nil {
+		if _, err := dbc.InsertProvide(c.Context, providerNode.ID, provide.CID, provide.Duration.Seconds(), provide.RoutingTableSize, provide.Error, dbScheduler.ID); err != nil {
 			return fmt.Errorf("insert provide: %w", err)
 		}
 
@@ -143,7 +148,7 @@ func SchedulerAction(c *cli.Context) error {
 					return nil
 				}
 
-				if _, err := dbc.InsertRetrieval(errCtx, retrievalNode.ID, retrieval.CID, retrieval.Duration.Seconds(), retrieval.RoutingTableSize, retrieval.Error); err != nil {
+				if _, err := dbc.InsertRetrieval(errCtx, retrievalNode.ID, retrieval.CID, retrieval.Duration.Seconds(), retrieval.RoutingTableSize, retrieval.Error, dbScheduler.ID); err != nil {
 					return fmt.Errorf("insert retrieval: %w", err)
 				}
 

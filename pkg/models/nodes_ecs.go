@@ -25,20 +25,20 @@ import (
 
 // Node is an object representing the database table.
 type Node struct {
-	ID            int               `boil:"id" json:"id" toml:"id" yaml:"id"`
-	CPU           int               `boil:"cpu" json:"cpu" toml:"cpu" yaml:"cpu"`
-	Memory        int               `boil:"memory" json:"memory" toml:"memory" yaml:"memory"`
-	PeerID        string            `boil:"peer_id" json:"peer_id" toml:"peer_id" yaml:"peer_id"`
-	Region        string            `boil:"region" json:"region" toml:"region" yaml:"region"`
-	CMD           string            `boil:"cmd" json:"cmd" toml:"cmd" yaml:"cmd"`
-	Tags          types.StringArray `boil:"tags" json:"tags" toml:"tags" yaml:"tags"`
-	Dependencies  types.JSON        `boil:"dependencies" json:"dependencies" toml:"dependencies" yaml:"dependencies"`
-	IPAddress     string            `boil:"ip_address" json:"ip_address" toml:"ip_address" yaml:"ip_address"`
-	ServerPort    int16             `boil:"server_port" json:"server_port" toml:"server_port" yaml:"server_port"`
-	PeerPort      int16             `boil:"peer_port" json:"peer_port" toml:"peer_port" yaml:"peer_port"`
-	LastHeartbeat null.Time         `boil:"last_heartbeat" json:"last_heartbeat,omitempty" toml:"last_heartbeat" yaml:"last_heartbeat,omitempty"`
-	OfflineSince  null.Time         `boil:"offline_since" json:"offline_since,omitempty" toml:"offline_since" yaml:"offline_since,omitempty"`
-	CreatedAt     time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	ID            int        `boil:"id" json:"id" toml:"id" yaml:"id"`
+	CPU           int        `boil:"cpu" json:"cpu" toml:"cpu" yaml:"cpu"`
+	Memory        int        `boil:"memory" json:"memory" toml:"memory" yaml:"memory"`
+	PeerID        string     `boil:"peer_id" json:"peer_id" toml:"peer_id" yaml:"peer_id"`
+	Region        string     `boil:"region" json:"region" toml:"region" yaml:"region"`
+	CMD           string     `boil:"cmd" json:"cmd" toml:"cmd" yaml:"cmd"`
+	Fleet         string     `boil:"fleet" json:"fleet" toml:"fleet" yaml:"fleet"`
+	Dependencies  types.JSON `boil:"dependencies" json:"dependencies" toml:"dependencies" yaml:"dependencies"`
+	IPAddress     string     `boil:"ip_address" json:"ip_address" toml:"ip_address" yaml:"ip_address"`
+	ServerPort    int16      `boil:"server_port" json:"server_port" toml:"server_port" yaml:"server_port"`
+	PeerPort      int16      `boil:"peer_port" json:"peer_port" toml:"peer_port" yaml:"peer_port"`
+	LastHeartbeat null.Time  `boil:"last_heartbeat" json:"last_heartbeat,omitempty" toml:"last_heartbeat" yaml:"last_heartbeat,omitempty"`
+	OfflineSince  null.Time  `boil:"offline_since" json:"offline_since,omitempty" toml:"offline_since" yaml:"offline_since,omitempty"`
+	CreatedAt     time.Time  `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *nodeR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L nodeL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -51,7 +51,7 @@ var NodeColumns = struct {
 	PeerID        string
 	Region        string
 	CMD           string
-	Tags          string
+	Fleet         string
 	Dependencies  string
 	IPAddress     string
 	ServerPort    string
@@ -66,7 +66,7 @@ var NodeColumns = struct {
 	PeerID:        "peer_id",
 	Region:        "region",
 	CMD:           "cmd",
-	Tags:          "tags",
+	Fleet:         "fleet",
 	Dependencies:  "dependencies",
 	IPAddress:     "ip_address",
 	ServerPort:    "server_port",
@@ -83,7 +83,7 @@ var NodeTableColumns = struct {
 	PeerID        string
 	Region        string
 	CMD           string
-	Tags          string
+	Fleet         string
 	Dependencies  string
 	IPAddress     string
 	ServerPort    string
@@ -98,7 +98,7 @@ var NodeTableColumns = struct {
 	PeerID:        "nodes_ecs.peer_id",
 	Region:        "nodes_ecs.region",
 	CMD:           "nodes_ecs.cmd",
-	Tags:          "nodes_ecs.tags",
+	Fleet:         "nodes_ecs.fleet",
 	Dependencies:  "nodes_ecs.dependencies",
 	IPAddress:     "nodes_ecs.ip_address",
 	ServerPort:    "nodes_ecs.server_port",
@@ -154,27 +154,6 @@ func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
 		values = append(values, value)
 	}
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
-type whereHelpertypes_StringArray struct{ field string }
-
-func (w whereHelpertypes_StringArray) EQ(x types.StringArray) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
-}
-func (w whereHelpertypes_StringArray) NEQ(x types.StringArray) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelpertypes_StringArray) LT(x types.StringArray) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertypes_StringArray) LTE(x types.StringArray) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertypes_StringArray) GT(x types.StringArray) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertypes_StringArray) GTE(x types.StringArray) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
 type whereHelpertypes_JSON struct{ field string }
@@ -273,7 +252,7 @@ var NodeWhere = struct {
 	PeerID        whereHelperstring
 	Region        whereHelperstring
 	CMD           whereHelperstring
-	Tags          whereHelpertypes_StringArray
+	Fleet         whereHelperstring
 	Dependencies  whereHelpertypes_JSON
 	IPAddress     whereHelperstring
 	ServerPort    whereHelperint16
@@ -288,7 +267,7 @@ var NodeWhere = struct {
 	PeerID:        whereHelperstring{field: "\"nodes_ecs\".\"peer_id\""},
 	Region:        whereHelperstring{field: "\"nodes_ecs\".\"region\""},
 	CMD:           whereHelperstring{field: "\"nodes_ecs\".\"cmd\""},
-	Tags:          whereHelpertypes_StringArray{field: "\"nodes_ecs\".\"tags\""},
+	Fleet:         whereHelperstring{field: "\"nodes_ecs\".\"fleet\""},
 	Dependencies:  whereHelpertypes_JSON{field: "\"nodes_ecs\".\"dependencies\""},
 	IPAddress:     whereHelperstring{field: "\"nodes_ecs\".\"ip_address\""},
 	ServerPort:    whereHelperint16{field: "\"nodes_ecs\".\"server_port\""},
@@ -336,8 +315,8 @@ func (r *nodeR) GetNodeRetrievalsEcs() RetrievalSlice {
 type nodeL struct{}
 
 var (
-	nodeAllColumns            = []string{"id", "cpu", "memory", "peer_id", "region", "cmd", "tags", "dependencies", "ip_address", "server_port", "peer_port", "last_heartbeat", "offline_since", "created_at"}
-	nodeColumnsWithoutDefault = []string{"cpu", "memory", "peer_id", "region", "cmd", "tags", "dependencies", "ip_address", "server_port", "peer_port", "created_at"}
+	nodeAllColumns            = []string{"id", "cpu", "memory", "peer_id", "region", "cmd", "fleet", "dependencies", "ip_address", "server_port", "peer_port", "last_heartbeat", "offline_since", "created_at"}
+	nodeColumnsWithoutDefault = []string{"cpu", "memory", "peer_id", "region", "cmd", "fleet", "dependencies", "ip_address", "server_port", "peer_port", "created_at"}
 	nodeColumnsWithDefault    = []string{"id", "last_heartbeat", "offline_since"}
 	nodePrimaryKeyColumns     = []string{"id"}
 	nodeGeneratedColumns      = []string{"id"}

@@ -59,13 +59,13 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.DHTServer,
 			Destination: &config.Server.DHTServer,
 		},
-		&cli.StringSliceFlag{
-			Name:        "tags",
-			Usage:       "Experiment tags. Used to let the scheduler just query a subset of nodes.",
-			EnvVars:     []string{"PARSEC_SERVER_TAGS"},
-			DefaultText: config.Server.Tags.String(),
-			Value:       config.Server.Tags,
-			Destination: config.Server.Tags,
+		&cli.StringFlag{
+			Name:        "fleet",
+			Usage:       "A fleet identifier",
+			EnvVars:     []string{"PARSEC_SERVER_FLEET"},
+			DefaultText: config.Server.Fleet,
+			Value:       config.Server.Fleet,
+			Destination: &config.Server.Fleet,
 		},
 	},
 }

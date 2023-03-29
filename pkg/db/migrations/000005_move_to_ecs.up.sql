@@ -1,5 +1,16 @@
 BEGIN;
 
+CREATE TABLE schedulers_ecs
+(
+    id           INT GENERATED ALWAYS AS IDENTITY,
+    fleets       TEXT[]      NOT NULL,
+    dependencies JSONB       NOT NULL,
+
+    created_at   TIMESTAMPTZ NOT NULL,
+
+    PRIMARY KEY (id)
+);
+
 CREATE TABLE nodes_ecs
 (
     id             INT GENERATED ALWAYS AS IDENTITY,
@@ -8,7 +19,7 @@ CREATE TABLE nodes_ecs
     peer_id        TEXT        NOT NULL,
     region         TEXT        NOT NULL,
     cmd            TEXT        NOT NULL,
-    tags           TEXT[]      NOT NULL,
+    fleet          TEXT        NOT NULL,
     dependencies   JSONB       NOT NULL,
     ip_address     INET        NOT NULL,
     server_port    SMALLINT    NOT NULL,
@@ -23,17 +34,23 @@ CREATE TABLE nodes_ecs
 
 CREATE TABLE retrievals_ecs
 (
-    id         INT GENERATED ALWAYS AS IDENTITY,
-    node_id    INT         NOT NULL,
-    rt_size    INT         NOT NULL,
-    duration   FLOAT       NOT NULL,
-    cid        TEXT        NOT NULL,
-    error      TEXT,
-    created_at TIMESTAMPTZ NOT NULL,
+    id           INT GENERATED ALWAYS AS IDENTITY,
+    scheduler_id INT         NOT NULL,
+    node_id      INT         NOT NULL,
+    rt_size      INT         NOT NULL,
+    duration     FLOAT       NOT NULL,
+    cid          TEXT        NOT NULL,
+    error        TEXT,
+    created_at   TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT fk_retrievals_ecs_node_id
         FOREIGN KEY (node_id)
             REFERENCES nodes_ecs (id)
+            ON DELETE CASCADE,
+
+    CONSTRAINT fk_retrievals_ecs_scheduler_id
+        FOREIGN KEY (scheduler_id)
+            REFERENCES schedulers_ecs (id)
             ON DELETE CASCADE,
 
     PRIMARY KEY (id)
@@ -41,17 +58,23 @@ CREATE TABLE retrievals_ecs
 
 CREATE TABLE provides_ecs
 (
-    id         INT GENERATED ALWAYS AS IDENTITY,
-    node_id    INT         NOT NULL,
-    rt_size    INT         NOT NULL,
-    duration   FLOAT       NOT NULL,
-    cid        TEXT        NOT NULL,
-    error      TEXT,
-    created_at TIMESTAMPTZ NOT NULL,
+    id           INT GENERATED ALWAYS AS IDENTITY,
+    scheduler_id INT         NOT NULL,
+    node_id      INT         NOT NULL,
+    rt_size      INT         NOT NULL,
+    duration     FLOAT       NOT NULL,
+    cid          TEXT        NOT NULL,
+    error        TEXT,
+    created_at   TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT fk_provides_ecs_node_id
         FOREIGN KEY (node_id)
             REFERENCES nodes_ecs (id)
+            ON DELETE CASCADE,
+
+    CONSTRAINT fk_provides_ecs_scheduler_id
+        FOREIGN KEY (scheduler_id)
+            REFERENCES schedulers_ecs (id)
             ON DELETE CASCADE,
 
     PRIMARY KEY (id)
