@@ -180,7 +180,8 @@ func (s *Server) metricsHandler(h http.Handler) http.Handler {
 			path = parts[1]
 		}
 
-		totalRequests.WithLabelValues(r.Method, path).Inc()
+		totalRequests.WithLabelValues(r.Method, path, r.Header.Get(headerSchedulerID)).Inc()
+
 		h.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)

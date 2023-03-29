@@ -11,7 +11,7 @@ var totalRequests = prometheus.NewCounterVec(
 		Name: "parsec_http_requests_total",
 		Help: "Number of http requests.",
 	},
-	[]string{"method", "path"},
+	[]string{"method", "path", "scheduler"},
 )
 
 var latencies = prometheus.NewSummaryVec(
