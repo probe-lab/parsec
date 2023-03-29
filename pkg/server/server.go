@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dennis-tra/parsec/pkg/models"
@@ -170,7 +171,14 @@ func (s *Server) logHandler(h http.Handler) http.Handler {
 
 func (s *Server) metricsHandler(h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		totalRequests.WithLabelValues(r.Method, r.URL.Path).Inc()
+		parts := strings.Split(r.URL.Path, "/")
+
+		path := "-"
+		if len(parts) > 1 {
+			path = parts[1]
+		}
+
+		totalRequests.WithLabelValues(r.Method, path).Inc()
 		h.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
