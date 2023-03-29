@@ -53,7 +53,7 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 	err = s.host.DHT.Provide(timeoutCtx, content.CID, true)
 	end := time.Now()
 
-	latencies.WithLabelValues("provide_duration", strconv.FormatBool(err == nil)).Observe(end.Sub(start).Seconds())
+	latencies.WithLabelValues("provide_duration", strconv.FormatBool(err == nil), r.Header.Get(headerSchedulerID)).Observe(end.Sub(start).Seconds())
 	log.WithField("cid", content.CID.String()).Infoln("Done providing content...")
 
 	resp := ProvideResponse{
@@ -99,6 +99,7 @@ func (c *Client) Provide(ctx context.Context, content *util.Content) (*ProvideRe
 	req = req.WithContext(ctx)
 
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add(headerSchedulerID, c.schedulerID)
 
 	res, err := c.client.Do(req)
 	if err != nil {

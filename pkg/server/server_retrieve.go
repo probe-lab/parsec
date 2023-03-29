@@ -55,7 +55,7 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	provider := <-s.host.DHT.FindProvidersAsync(ctx, c, 1)
 	resp.Duration = time.Since(start)
 
-	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(err == nil)).Observe(resp.Duration.Seconds())
+	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(ctx.Err() == nil), r.Header.Get(headerSchedulerID)).Observe(resp.Duration.Seconds())
 
 	logEntry = logEntry.WithField("dur", resp.Duration.Seconds())
 
@@ -101,6 +101,7 @@ func (c *Client) Retrieve(ctx context.Context, content cid.Cid) (*RetrievalRespo
 	req = req.WithContext(ctx)
 
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add(headerSchedulerID, c.schedulerID)
 
 	res, err := c.client.Do(req)
 	if err != nil {

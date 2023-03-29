@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -76,7 +77,7 @@ func SchedulerAction(c *cli.Context) error {
 
 		clients := make([]*server.Client, len(dbNodes))
 		for i, node := range dbNodes {
-			client := server.NewClient(node.IPAddress, node.ServerPort)
+			client := server.NewClient(node.IPAddress, node.ServerPort, strings.Join(config.Scheduler.Fleets.Value(), ","))
 
 			if err = client.Readiness(c.Context); err != nil {
 				log.WithField("nodeID", node.ID).WithError(err).Warnln("Node not ready")

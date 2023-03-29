@@ -50,6 +50,8 @@ func (c *Client) Info(ctx context.Context) (*InfoResponse, error) {
 	}
 	req = req.WithContext(ctx)
 
+	req.Header.Add(headerSchedulerID, c.schedulerID)
+
 	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("get info: %w", err)

@@ -6,13 +6,15 @@ import (
 )
 
 type Client struct {
-	client *http.Client
-	addr   string
+	client      *http.Client
+	addr        string
+	schedulerID string
 }
 
-func NewClient(host string, port int16) *Client {
+func NewClient(host string, port int16, schedulerID string) *Client {
 	return &Client{
-		addr:   fmt.Sprintf("%s:%d", host, port),
-		client: http.DefaultClient,
+		schedulerID: schedulerID,
+		addr:        fmt.Sprintf("%s:%d", host, port),
+		client:      http.DefaultClient,
 	}
 }

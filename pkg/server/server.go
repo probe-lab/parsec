@@ -29,6 +29,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const headerSchedulerID = "x-scheduler-id"
+
 type Server struct {
 	server *http.Server
 	done   chan struct{}
