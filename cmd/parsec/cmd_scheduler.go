@@ -74,6 +74,7 @@ func SchedulerAction(c *cli.Context) error {
 			client := server.NewClient(node.IPAddress, node.ServerPort)
 
 			if err = client.Readiness(c.Context); err != nil {
+				log.WithField("nodeID", node.ID).WithError(err).Warnln("Node not ready")
 				if err := dbc.UpdateOfflineSince(c.Context, node); err != nil {
 					log.WithField("nodeID", node.ID).WithError(err).Warnln("Couldn't put node offline")
 				}
@@ -81,6 +82,16 @@ func SchedulerAction(c *cli.Context) error {
 			}
 
 			clients[i] = client
+		}
+
+		if len(clients) == 0 {
+			log.WithField("tags", config.Scheduler.Tags.Value()).Infoln("Less than two nodes ready. Waiting 10s and then trying again...")
+			select {
+			case <-time.After(10 * time.Second):
+				continue
+			case <-c.Context.Done():
+				return c.Err()
+			}
 		}
 
 		// If nodes leave the network
