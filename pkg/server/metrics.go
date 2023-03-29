@@ -1,6 +1,10 @@
 package server
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 var totalRequests = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
@@ -13,8 +17,9 @@ var totalRequests = prometheus.NewCounterVec(
 var latencies = prometheus.NewSummaryVec(
 	prometheus.SummaryOpts{
 		Name:       "parsec_durations",
-		Help:       "ttfpr latencies",
+		Help:       "various latencies",
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		MaxAge:     24 * time.Hour,
 	},
 	[]string{"type", "success"},
 )
