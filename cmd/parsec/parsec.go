@@ -217,7 +217,7 @@ func metricsListenAndServe(host string, port int) {
 		log.Fatalf("Failed to create the Prometheus stats exporter: %v", err)
 	}
 
-	mux := http.NewServeMux()
+	mux := http.DefaultServeMux
 	mux.Handle("/metrics", pe)
 
 	if err := http.ListenAndServe(addr, mux); err != nil {
