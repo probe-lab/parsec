@@ -119,6 +119,13 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 
 	go func() {
+		// Start by waiting three minutes until the node is ready.
+		time.Sleep(3 * time.Minute)
+
+		if err := s.dbc.UpdateHeartbeat(ctx, s.dbNode); err != nil {
+			log.WithError(err).Warnln("Couldn't update heartbeat")
+		}
+
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 
