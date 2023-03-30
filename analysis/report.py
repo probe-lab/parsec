@@ -47,8 +47,26 @@ def get_retrievals(conn: sa.engine.Engine, start_date: str, end_date: str) -> pd
           AND n.instance_type = 't3.small'
         ORDER BY r.created_at
     """
-    return pd.read_sql_query(query, con=conn)
+    legacy = pd.read_sql_query(query, con=conn)
 
+    query = f"""
+        SELECT
+            n.region,
+            r.duration,
+            r.created_at,
+            DATE(r.created_at)::TEXT date,
+            r.error IS NOT NULL has_error
+        FROM retrievals_ecs r
+            INNER JOIN nodes_ecs n ON r.node_id = n.id
+        WHERE r.created_at >= '{start_date}'
+          AND r.created_at < '{end_date}'
+          AND r.rt_size > 200
+          AND n.fleet = 'default'
+        ORDER BY r.created_at
+    """
+    ecs = pd.read_sql_query(query, con=conn)
+
+    return pd.concat([legacy, ecs]).reset_index()
 
 def get_publications(conn: sa.engine.Engine, start_date: str, end_date: str) -> pd.DataFrame:
     print("Loading publications...")
@@ -67,7 +85,26 @@ def get_publications(conn: sa.engine.Engine, start_date: str, end_date: str) -> 
           AND n.instance_type = 't3.small'
         ORDER BY p.created_at
     """
-    return pd.read_sql_query(query, con=conn)
+    legacy = pd.read_sql_query(query, con=conn)
+
+    query = f"""
+        SELECT
+            n.region,
+            p.duration,
+            p.created_at,
+            DATE(p.created_at)::TEXT date,
+            p.error IS NOT NULL has_error
+        FROM provides_ecs p
+            INNER JOIN nodes_ecs n ON p.node_id = n.id
+        WHERE p.created_at >= '{start_date}'
+          AND p.created_at < '{end_date}'
+          AND p.rt_size > 190
+          AND n.fleet = 'default'
+        ORDER BY p.created_at
+    """
+    ecs = pd.read_sql_query(query, con=conn)
+
+    return pd.concat([legacy, ecs]).reset_index()
 
 
 def week_boxplots(data: pd.DataFrame, boxcolor: str, ylabel: str, title: str) -> plt.Figure:
@@ -242,8 +279,8 @@ def errors(provides: pd.DataFrame, retrievals: pd.DataFrame) -> plt.Figure:
 
 def main():
     conn = sa.create_engine(connection_string())
-    date_min = "2023-03-20"
-    date_max = "2023-03-27"
+    date_min = "2023-03-27"
+    date_max = "2023-04-03"
 
     retrievals = get_retrievals(conn, date_min, date_max)
     publications = get_publications(conn, date_min, date_max)
