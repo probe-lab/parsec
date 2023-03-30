@@ -286,19 +286,19 @@ def main():
     publications = get_publications(conn, date_min, date_max)
 
     fig = week_boxplots(retrievals, "b", "Time to First Provider Record in s", "Retrievals")
-    fig.savefig("./plots/parsec-retrievals-boxplot.png")
+    fig.savefig("./plots/parsec-retrievals-boxplot-daily.png")
 
     fig = week_boxplots(publications, "r", "Publication Duration in s", "Publications")
-    fig.savefig("./plots/parsec-publications-boxplot.png")
+    fig.savefig("./plots/parsec-publications-boxplot-daily.png")
 
     fig = regional_boxplots(retrievals, publications)
-    fig.savefig("./plots/parsec-regional-boxplot.png")
+    fig.savefig("./plots/parsec-regions-boxplot.png")
 
     fig = regional_cdfs(retrievals, publications)
-    fig.savefig("./plots/parsec-regional-cdfs.png")
+    fig.savefig("./plots/parsec-regions-cdf.png")
 
     fig = errors(retrievals, publications)
-    fig.savefig("./plots/parsec-errors.png")
+    fig.savefig("./plots/parsec-error-rate.png")
 
 
 if __name__ == "__main__":
