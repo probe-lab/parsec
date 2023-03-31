@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
@@ -55,19 +56,21 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool) (*Host, err
 				mode = kaddht.ModeServer
 			}
 
-			var err error
 			if fullRT {
 				log.Infoln("Using full accelerated DHT client")
-				dht, err = fullrt.NewFullRT(h, ipfsProtocolPrefix, fullrt.DHTOption(
+				return fullrt.NewFullRT(h, ipfsProtocolPrefix, fullrt.DHTOption(
 					kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
 					kaddht.BucketSize(20),
 					kaddht.Mode(mode),
 				))
 			} else {
 				log.Infoln("Using standard DHT client")
-				dht, err = kaddht.New(ctx, h, kaddht.Mode(mode))
+				ds, err := leveldb.NewDatastore("", nil)
+				if err != nil {
+					return nil, err
+				}
+				return kaddht.New(ctx, h, kaddht.Mode(mode), kaddht.Datastore(ds))
 			}
-			return dht, err
 		}),
 	)
 	if err != nil {
