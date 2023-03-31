@@ -17,6 +17,7 @@ RUN apk add --update curl && rm -rf /var/cache/apk/*
 
 RUN adduser -D -H parsec
 WORKDIR /home/parsec
+RUN chown -R parsec:parsec /home/parsec
 USER parsec
 
 COPY --from=builder /build/parsec /usr/local/bin/parsec

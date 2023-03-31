@@ -44,7 +44,7 @@ type Server struct {
 func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	parsecHost, err := dht.New(ctx, conf.PeerPort, conf.FullRT, conf.DHTServer)
+	parsecHost, err := dht.New(ctx, conf.PeerPort, conf.FullRT, conf.DHTServer, conf.LevelDB)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("new host: %w", err)

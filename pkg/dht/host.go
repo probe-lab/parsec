@@ -6,6 +6,7 @@ import (
 	"time"
 
 	leveldb "github.com/ipfs/go-ds-leveldb"
+
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
@@ -25,7 +26,7 @@ type Host struct {
 	DHT routing.Routing
 }
 
-func New(ctx context.Context, port int, fullRT bool, dhtServer bool) (*Host, error) {
+func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string) (*Host, error) {
 	addrs := []string{
 		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port),
 		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic", port),
@@ -47,7 +48,7 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool) (*Host, err
 		return nil, fmt.Errorf("register metric views: %w", err)
 	}
 
-	ds, err := leveldb.NewDatastore("./leveldb", nil)
+	ds, err := leveldb.NewDatastore(ldb, nil)
 	if err != nil {
 		return nil, fmt.Errorf("leveldb datastore: %w", err)
 	}

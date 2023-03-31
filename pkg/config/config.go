@@ -88,6 +88,7 @@ type ServerConfig struct {
 	FullRT     bool
 	DHTServer  bool
 	Fleet      string
+	LevelDB    string
 }
 
 var Server = ServerConfig{
@@ -97,6 +98,7 @@ var Server = ServerConfig{
 	Fleet:      "",
 	FullRT:     false,
 	DHTServer:  false,
+	LevelDB:    "./leveldb",
 }
 
 type SchedulerConfig struct {

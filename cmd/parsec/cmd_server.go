@@ -67,6 +67,14 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.Fleet,
 			Destination: &config.Server.Fleet,
 		},
+		&cli.StringFlag{
+			Name:        "level-db",
+			Usage:       "Path to the level DB datastore",
+			EnvVars:     []string{"PARSEC_SERVER_LEVELDB"},
+			DefaultText: config.Server.LevelDB,
+			Value:       config.Server.LevelDB,
+			Destination: &config.Server.LevelDB,
+		},
 	},
 }
 
