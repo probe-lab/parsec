@@ -3,6 +3,7 @@ package dht
 import (
 	"context"
 	"fmt"
+	"time"
 
 	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
@@ -46,6 +47,30 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool) (*Host, err
 		return nil, fmt.Errorf("register metric views: %w", err)
 	}
 
+	ds, err := leveldb.NewDatastore("./leveldb", nil)
+	if err != nil {
+		return nil, fmt.Errorf("leveldb datastore: %w", err)
+	}
+
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+
+			usage, err := ds.DiskUsage(ctx)
+			if err != nil {
+				log.WithError(err).Warnln("Couldn't get disk usage")
+				continue
+			}
+
+			diskUsage.Set(float64(usage))
+		}
+	}()
+
 	var dht routing.Routing
 	h, err := libp2p.New(
 		libp2p.ResourceManager(rm),
@@ -62,13 +87,10 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool) (*Host, err
 					kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
 					kaddht.BucketSize(20),
 					kaddht.Mode(mode),
+					kaddht.Datastore(ds),
 				))
 			} else {
 				log.Infoln("Using standard DHT client")
-				ds, err := leveldb.NewDatastore("", nil)
-				if err != nil {
-					return nil, err
-				}
 				return kaddht.New(ctx, h, kaddht.Mode(mode), kaddht.Datastore(ds))
 			}
 		}),
