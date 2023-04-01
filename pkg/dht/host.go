@@ -84,7 +84,7 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string)
 
 			if fullRT {
 				log.Infoln("Using full accelerated DHT client")
-				return fullrt.NewFullRT(h, ipfsProtocolPrefix, fullrt.DHTOption(
+				dht, err = fullrt.NewFullRT(h, ipfsProtocolPrefix, fullrt.DHTOption(
 					kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
 					kaddht.BucketSize(20),
 					kaddht.Mode(mode),
@@ -92,8 +92,9 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string)
 				))
 			} else {
 				log.Infoln("Using standard DHT client")
-				return kaddht.New(ctx, h, kaddht.Mode(mode), kaddht.Datastore(ds))
+				dht, err = kaddht.New(ctx, h, kaddht.Mode(mode), kaddht.Datastore(ds))
 			}
+			return dht, err
 		}),
 	)
 	if err != nil {

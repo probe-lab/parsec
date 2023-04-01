@@ -3,3 +3,4 @@ db.toml
 
 analysis/plots/*.png
 dist
+leveldb
