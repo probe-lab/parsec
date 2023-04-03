@@ -89,6 +89,7 @@ type ServerConfig struct {
 	DHTServer      bool
 	Fleet          string
 	LevelDB        string
+	OptProv        bool
 	FirehoseStream string
 	FirehoseRegion string
 }

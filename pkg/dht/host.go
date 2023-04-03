@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dennis-tra/parsec/pkg/config"
 	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
@@ -28,16 +29,16 @@ type Host struct {
 	BasicHost *basichost.BasicHost
 }
 
-func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string) (*Host, error) {
+func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 	addrs := []string{
-		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port),
-		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic", port),
-		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", port),
-		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1/webtransport", port),
-		fmt.Sprintf("/ip6/::/tcp/%d", port),
-		fmt.Sprintf("/ip6/::/udp/%d/quic", port),
-		fmt.Sprintf("/ip6/::/udp/%d/quic-v1", port),
-		fmt.Sprintf("/ip6/::/udp/%d/quic-v1/webtransport", port),
+		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", conf.PeerPort),
+		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic", conf.PeerPort),
+		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", conf.PeerPort),
+		fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1/webtransport", conf.PeerPort),
+		fmt.Sprintf("/ip6/::/tcp/%d", conf.PeerPort),
+		fmt.Sprintf("/ip6/::/udp/%d/quic", conf.PeerPort),
+		fmt.Sprintf("/ip6/::/udp/%d/quic-v1", conf.PeerPort),
+		fmt.Sprintf("/ip6/::/udp/%d/quic-v1/webtransport", conf.PeerPort),
 	}
 
 	limiter := rcmgr.NewFixedLimiter(rcmgr.InfiniteLimits)
@@ -50,7 +51,7 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string)
 		return nil, fmt.Errorf("register metric views: %w", err)
 	}
 
-	ds, err := leveldb.NewDatastore(ldb, nil)
+	ds, err := leveldb.NewDatastore(conf.LevelDB, nil)
 	if err != nil {
 		return nil, fmt.Errorf("leveldb datastore: %w", err)
 	}
@@ -70,7 +71,7 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string)
 				continue
 			}
 
-			diskUsage.Set(float64(usage))
+			diskUsageGauge.Set(float64(usage))
 		}
 	}()
 
@@ -83,12 +84,12 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string)
 	}
 
 	mode := kaddht.ModeClient
-	if dhtServer {
+	if conf.DHTServer {
 		mode = kaddht.ModeServer
 	}
 
 	var dht routing.Routing
-	if fullRT {
+	if conf.FullRT {
 		log.Infoln("Using full accelerated DHT client")
 		dht, err = fullrt.NewFullRT(basicHost, ipfsProtocolPrefix, fullrt.DHTOption(
 			kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
@@ -98,7 +99,11 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string)
 		))
 	} else {
 		log.Infoln("Using standard DHT client")
-		dht, err = kaddht.New(ctx, basicHost, kaddht.Mode(mode), kaddht.Datastore(ds))
+		opts := []kaddht.Option{kaddht.Mode(mode), kaddht.Datastore(ds)}
+		if conf.OptProv {
+			opts = append(opts, kaddht.EnableOptimisticProvide())
+		}
+		dht, err = kaddht.New(ctx, basicHost, opts...)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("new router: %w", err)
@@ -109,9 +114,32 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string)
 		DHT:       dht,
 	}
 
+	go newHost.measureNetworkSize(ctx)
+
 	log.WithField("localID", newHost.ID()).Info("Initialized new libp2p host")
 
 	return newHost, nil
+}
+
+func (h Host) measureNetworkSize(ctx context.Context) {
+	idht, ok := h.DHT.(*kaddht.IpfsDHT)
+	if ok {
+		go func() {
+			t := time.NewTicker(time.Minute)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-t.C:
+				}
+				netSize, err := idht.NetworkSize()
+				if err != nil {
+					continue
+				}
+				netSizeGauge.Set(float64(netSize))
+			}
+		}()
+	}
 }
 
 func RoutingTableSize(dht routing.Routing) int {

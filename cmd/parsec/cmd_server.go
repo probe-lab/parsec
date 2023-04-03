@@ -59,6 +59,14 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.DHTServer,
 			Destination: &config.Server.DHTServer,
 		},
+		&cli.BoolFlag{
+			Name:        "optprov",
+			Usage:       "Whether to enable optimistic provide",
+			EnvVars:     []string{"PARSEC_SERVER_OPTPROV"},
+			DefaultText: strconv.FormatBool(config.Server.OptProv),
+			Value:       config.Server.OptProv,
+			Destination: &config.Server.OptProv,
+		},
 		&cli.StringFlag{
 			Name:        "fleet",
 			Usage:       "A fleet identifier",

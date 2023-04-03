@@ -49,7 +49,7 @@ var _ network.Notifiee = (*Server)(nil)
 func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	parsecHost, err := dht.New(ctx, conf.PeerPort, conf.FullRT, conf.DHTServer, conf.LevelDB)
+	parsecHost, err := dht.New(ctx, conf)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("new host: %w", err)
