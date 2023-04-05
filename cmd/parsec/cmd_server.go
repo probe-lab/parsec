@@ -75,6 +75,20 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.LevelDB,
 			Destination: &config.Server.LevelDB,
 		},
+		&cli.StringFlag{
+			Name:        "firehose-region",
+			EnvVars:     []string{"PARSEC_SERVER_FIREHOSE_REGION"},
+			DefaultText: config.Server.FirehoseRegion,
+			Value:       config.Server.FirehoseRegion,
+			Destination: &config.Server.FirehoseRegion,
+		},
+		&cli.StringFlag{
+			Name:        "firehose-stream",
+			EnvVars:     []string{"PARSEC_SERVER_FIREHOSE_STREAM"},
+			DefaultText: config.Server.FirehoseStream,
+			Value:       config.Server.FirehoseStream,
+			Destination: &config.Server.FirehoseStream,
+		},
 	},
 }
 

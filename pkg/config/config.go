@@ -81,24 +81,27 @@ func (g GlobalConfig) ECSMetadata() (*ECSMetadata, error) {
 }
 
 type ServerConfig struct {
-	ServerHost string
-	ServerPort int
-	PeerHost   string
-	PeerPort   int
-	FullRT     bool
-	DHTServer  bool
-	Fleet      string
-	LevelDB    string
+	ServerHost     string
+	ServerPort     int
+	PeerHost       string
+	PeerPort       int
+	FullRT         bool
+	DHTServer      bool
+	Fleet          string
+	LevelDB        string
+	FirehoseStream string
+	FirehoseRegion string
 }
 
 var Server = ServerConfig{
-	ServerHost: "localhost",
-	ServerPort: 7070,
-	PeerPort:   4001,
-	Fleet:      "",
-	FullRT:     false,
-	DHTServer:  false,
-	LevelDB:    "./leveldb",
+	ServerHost:     "localhost",
+	ServerPort:     7070,
+	PeerPort:       4001,
+	Fleet:          "",
+	FullRT:         false,
+	DHTServer:      false,
+	LevelDB:        "./leveldb",
+	FirehoseRegion: "us-east-1",
 }
 
 type SchedulerConfig struct {

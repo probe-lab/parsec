@@ -5,6 +5,7 @@ go 1.19
 require (
 	contrib.go.opencensus.io/exporter/prometheus v0.4.2
 	contrib.go.opencensus.io/integrations/ocsql v0.1.7
+	github.com/aws/aws-sdk-go v1.36.30
 	github.com/friendsofgo/errors v0.9.2
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/ipfs/go-cid v0.3.2
@@ -74,6 +75,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.15.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.1 // indirect
 	github.com/koron/go-ssdp v0.0.3 // indirect

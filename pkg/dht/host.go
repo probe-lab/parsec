@@ -6,14 +6,15 @@ import (
 	"time"
 
 	leveldb "github.com/ipfs/go-ds-leveldb"
-
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
 	"github.com/libp2p/go-libp2p-kad-dht/metrics"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/routing"
+	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
+	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
@@ -23,7 +24,8 @@ const ipfsProtocolPrefix = "/ipfs"
 
 type Host struct {
 	host.Host
-	DHT routing.Routing
+	DHT       routing.Routing
+	BasicHost *basichost.BasicHost
 }
 
 func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string) (*Host, error) {
@@ -72,41 +74,42 @@ func New(ctx context.Context, port int, fullRT bool, dhtServer bool, ldb string)
 		}
 	}()
 
-	var dht routing.Routing
-	h, err := libp2p.New(
+	basicHost, err := libp2p.New(
 		libp2p.ResourceManager(rm),
 		libp2p.ListenAddrStrings(addrs...),
-		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
-			mode := kaddht.ModeClient
-			if dhtServer {
-				mode = kaddht.ModeServer
-			}
-
-			if fullRT {
-				log.Infoln("Using full accelerated DHT client")
-				dht, err = fullrt.NewFullRT(h, ipfsProtocolPrefix, fullrt.DHTOption(
-					kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
-					kaddht.BucketSize(20),
-					kaddht.Mode(mode),
-					kaddht.Datastore(ds),
-				))
-			} else {
-				log.Infoln("Using standard DHT client")
-				dht, err = kaddht.New(ctx, h, kaddht.Mode(mode), kaddht.Datastore(ds))
-			}
-			return dht, err
-		}),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "new libp2p host")
+		return nil, fmt.Errorf("new libp2p host: %w", err)
 	}
 
+	mode := kaddht.ModeClient
+	if dhtServer {
+		mode = kaddht.ModeServer
+	}
+
+	var dht routing.Routing
+	if fullRT {
+		log.Infoln("Using full accelerated DHT client")
+		dht, err = fullrt.NewFullRT(basicHost, ipfsProtocolPrefix, fullrt.DHTOption(
+			kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
+			kaddht.BucketSize(20),
+			kaddht.Mode(mode),
+			kaddht.Datastore(ds),
+		))
+	} else {
+		log.Infoln("Using standard DHT client")
+		dht, err = kaddht.New(ctx, basicHost, kaddht.Mode(mode), kaddht.Datastore(ds))
+	}
+	if err != nil {
+		return nil, fmt.Errorf("new router: %w", err)
+	}
 	newHost := &Host{
-		Host: h,
-		DHT:  dht,
+		Host:      routedhost.Wrap(basicHost, dht),
+		BasicHost: basicHost.(*basichost.BasicHost),
+		DHT:       dht,
 	}
 
-	log.WithField("localID", h.ID()).Info("Initialized new libp2p host")
+	log.WithField("localID", newHost.ID()).Info("Initialized new libp2p host")
 
 	return newHost, nil
 }
