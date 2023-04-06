@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dennis-tra/parsec/pkg/config"
 	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
@@ -19,6 +18,8 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
+
+	"github.com/dennis-tra/parsec/pkg/config"
 )
 
 const ipfsProtocolPrefix = "/ipfs"
