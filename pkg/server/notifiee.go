@@ -98,7 +98,6 @@ func (s Server) trackConnectionEvent(conn network.Conn, evtType string) {
 		return
 	}
 
-	log.Infoln("Put record!")
 	_, err = s.fh.PutRecord(&firehose.PutRecordInput{
 		Record:             &firehose.Record{Data: data},
 		DeliveryStreamName: aws.String(s.stream),
