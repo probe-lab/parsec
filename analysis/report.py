@@ -1,4 +1,7 @@
 import toml
+import os
+import sys
+import datetime as dt
 import math
 import pickle
 import pandas as pd
@@ -18,8 +21,8 @@ sns.set_theme()
 DPI = 150
 
 
-def connection_string(config=toml.load("./db.toml")['psql']) -> str:
-    return f"postgresql://{config['user']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}"
+def connection_string(config) -> str:
+    return f"postgresql://{config.get('user')}:{config.get('password')}@{config.get('host')}:{config.get('port')}/{config.get('database')}?sslmode={config.get('sslmode','prefer')}"
 
 
 def cdf(series: pd.Series) -> pd.DataFrame:
@@ -278,9 +281,44 @@ def errors(provides: pd.DataFrame, retrievals: pd.DataFrame) -> plt.Figure:
     return fig
 
 def main():
-    conn = sa.create_engine(connection_string())
-    date_min = "2023-03-27"
-    date_max = "2023-04-03"
+    if os.environ.get('PARSEC_DATABASE_HOST') is not None:
+        db_config = {
+            'host': os.environ['PARSEC_DATABASE_HOST'],
+            'port': os.environ['PARSEC_DATABASE_PORT'],
+            'database': os.environ['PARSEC_DATABASE_NAME'],
+            'user': os.environ['PARSEC_DATABASE_USER'],
+            'password': os.environ['PARSEC_DATABASE_PASSWORD'],
+            'sslmode': os.environ['PARSEC_DATABASE_SSL_MODE'],
+        }
+    else:
+        db_config=toml.load("./db.toml")['psql']
+
+    conn = sa.create_engine(connection_string(db_config))
+
+    now = dt.datetime.today()
+    year = os.getenv('PARSEC_REPORT_YEAR', now.year)
+    calendar_week = os.getenv('PARSEC_REPORT_WEEK', now.isocalendar().week - 1)
+    date_min = dt.datetime.strptime(f"{year}-W{calendar_week}-1", "%Y-W%W-%w")
+    date_max = date_min + dt.timedelta(weeks=1)
+
+    if len(sys.argv) > 1:
+        output_dir = sys.argv[1]
+    else:
+        output_dir = '.'
+
+    plots_dir = os.path.join(output_dir, f"plots-{calendar_week}")
+    if not os.path.isdir(plots_dir):
+        os.mkdir(plots_dir)
+
+    print(f'Generating report for year {year}, week {calendar_week}')
+    print(f'Date range from {date_min} to {date_max}')
+    print(f'Writing plots to {plots_dir}')
+    print('Using database connection with:')
+    print('host: ' + db_config['host'])
+    print('port: ' + str(db_config['port']))
+    print('database: ' + db_config['database'])
+    print('user: ' + db_config['user'])
+    print('sslmode: ' + db_config.get('sslmode','prefer'))
 
     retrievals = get_retrievals(conn, date_min, date_max)
     publications = get_publications(conn, date_min, date_max)
