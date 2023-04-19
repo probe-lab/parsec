@@ -306,7 +306,9 @@ def main():
     else:
         output_dir = '.'
 
-    plots_dir = os.path.join(output_dir, f"plots-{calendar_week}")
+    # allow name of plots directory to be overridden
+    plots_dirname = os.getenv('PARSEC_PLOTS_DIRNAME', 'plots')
+    plots_dir = os.path.join(output_dir, plots_dirname)
     if not os.path.isdir(plots_dir):
         os.mkdir(plots_dir)
 
@@ -324,19 +326,19 @@ def main():
     publications = get_publications(conn, date_min, date_max)
 
     fig = week_boxplots(retrievals, "b", "Time to First Provider Record in s", "Retrievals")
-    fig.savefig("./plots/parsec-retrievals-boxplot-daily.png")
+    fig.savefig(f"{plots_dir}/parsec-retrievals-boxplot-daily.png")
 
     fig = week_boxplots(publications, "r", "Publication Duration in s", "Publications")
-    fig.savefig("./plots/parsec-publications-boxplot-daily.png")
+    fig.savefig(f"{plots_dir}/parsec-publications-boxplot-daily.png")
 
     fig = regional_boxplots(retrievals, publications)
-    fig.savefig("./plots/parsec-regions-boxplot.png")
+    fig.savefig(f"{plots_dir}/parsec-regions-boxplot.png")
 
     fig = regional_cdfs(retrievals, publications)
-    fig.savefig("./plots/parsec-regions-cdf.png")
+    fig.savefig(f"{plots_dir}/parsec-regions-cdf.png")
 
     fig = errors(retrievals, publications)
-    fig.savefig("./plots/parsec-error-rate.png")
+    fig.savefig(f"{plots_dir}/parsec-error-rate.png")
 
 
 if __name__ == "__main__":
