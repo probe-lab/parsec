@@ -138,6 +138,9 @@ paths:
       description: |
         If the server is ready to accept publication or retrieval requests this endpoint returns
         a `2xx` status code. Any other status code indicates non-readiness.
+        
+        Note: the scheduler checks the response but functionality-wise this is a bit redundant with
+        the database entry of the server.
       responses:
         '200':
           description: The server is ready to accept publication or retrieval requests.
