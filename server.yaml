@@ -20,6 +20,11 @@ paths:
         it returns the generated CID, the duration it took
         to publish the provider record, any error that may have occurred,
         and the number of peers in the routing table upon publication.
+      parameters:
+        - name: x-scheduler-id
+          in: header
+          description: An identifier of the scheduler that's doing the request. This value is used for prometheus metrics.
+          example: optprov
       requestBody:
         description: |
           The request body just contains the data for which the server
@@ -78,6 +83,10 @@ paths:
         This endpoint takes the CID from the path component, looks up provider records in the DHT,
         and measures the time it took to find the first one.
       parameters:
+        - name: x-scheduler-id
+          in: header
+          description: An identifier of the scheduler that's doing the request. This value is used for prometheus metrics.
+          example: fullrt
         - name: cid
           in: path
           description: CID to look up

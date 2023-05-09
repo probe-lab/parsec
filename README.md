@@ -127,6 +127,31 @@ the `last_heartbeat` is not null. In AWS, we're using [VPC peering](https://docs
 
 The server must update the `node_ecs` row every minute to indicate it's still alive and happy to accept requests.
 
+### Optional: Prometheus Metrics
+
+To expose real time metrics about the publication and retrieval performance the Go server exposes a few prometheus metrics:
+
+```
+metric: parsec_durations
+type: summary
+buckets: 50th, 90th, 95th percentile
+maxAge: 24h
+labels:
+  type: retrieval_ttfpr | provide_duration
+  success: true | false
+  scheduler: default | optprov | fullrt
+```
+
+```
+metric: parsec_http_requests_total
+type: summary
+buckets: 50th, 90th, 95th percentile
+maxAge: 24h
+labels:
+  method: GET | POST | ...
+  path: /retrieve | /provide 
+  scheduler: default | optprov | fullrt
+```
 
 ### `ECS_CONTAINER_METADATA_URI_V4` response:
 
