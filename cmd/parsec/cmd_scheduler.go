@@ -75,8 +75,8 @@ func SchedulerAction(c *cli.Context) error {
 
 		activeNodes.Set(float64(len(dbNodes)))
 
-		clients := make([]*server.Client, len(dbNodes))
-		for i, node := range dbNodes {
+		clients := []*server.Client{}
+		for _, node := range dbNodes {
 			client := server.NewClient(node.IPAddress, node.ServerPort, strings.Join(config.Scheduler.Fleets.Value(), ","))
 
 			if err = client.Readiness(c.Context); err != nil {
@@ -87,7 +87,7 @@ func SchedulerAction(c *cli.Context) error {
 				continue
 			}
 
-			clients[i] = client
+			clients = append(clients, client)
 		}
 
 		if len(clients) == 0 {

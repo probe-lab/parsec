@@ -102,6 +102,8 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		}
 
 		parsecHost.Network().Notify(s)
+	} else {
+		log.Infoln("No firehose stream configured.")
 	}
 
 	return s, nil
@@ -153,7 +155,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 
 	go func() {
 		// Start by waiting three minutes until the node is ready.
-		time.Sleep(3 * time.Minute)
+		time.Sleep(s.conf.StartupDelay)
 
 		if err := s.dbc.UpdateHeartbeat(ctx, s.dbNode); err != nil {
 			log.WithError(err).Warnln("Couldn't update heartbeat")
@@ -178,7 +180,6 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}()
 
 	router := httprouter.New()
-	router.GET("/info", s.info)
 	router.POST("/provide", s.provide)
 	router.POST("/retrieve/:cid", s.retrieve)
 	router.GET("/readiness", s.readiness)

@@ -97,6 +97,13 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.FirehoseStream,
 			Destination: &config.Server.FirehoseStream,
 		},
+		&cli.DurationFlag{
+			Name:        "startup-delay",
+			EnvVars:     []string{"PARSEC_SERVER_STARTUP_DELAY"},
+			DefaultText: config.Server.StartupDelay.String(),
+			Value:       config.Server.StartupDelay,
+			Destination: &config.Server.StartupDelay,
+		},
 	},
 }
 

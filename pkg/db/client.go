@@ -162,9 +162,9 @@ func (c *DBClient) InsertScheduler(ctx context.Context, fleets []string) (*model
 }
 
 func (c *DBClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error) {
-	ecsm, err := c.conf.ECSMetadata()
+	sp, err := c.conf.ServerProcess()
 	if err != nil {
-		return nil, fmt.Errorf("ecs metadata: %w", err)
+		return nil, fmt.Errorf("server process: %w", err)
 	}
 
 	bi, ok := debug.ReadBuildInfo()
@@ -178,13 +178,13 @@ func (c *DBClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.S
 	}
 
 	n := &models.Node{
-		CPU:          int(ecsm.Limits.CPU),
-		Memory:       int(ecsm.Limits.Memory),
+		CPU:          int(sp.CPU),
+		Memory:       int(sp.Memory),
 		PeerID:       peerID.String(),
 		Region:       c.conf.AWSRegion,
 		CMD:          strings.Join(os.Args, " "),
 		Dependencies: biData,
-		IPAddress:    ecsm.GetPrivateIP(),
+		IPAddress:    sp.PrivateIP.String(),
 		Fleet:        conf.Fleet,
 		ServerPort:   int16(conf.ServerPort),
 		PeerPort:     int16(conf.PeerPort),
@@ -204,6 +204,7 @@ func (c *DBClient) GetNodes(ctx context.Context, fleets []string) (models.NodeSl
 }
 
 func (c *DBClient) UpdateHeartbeat(ctx context.Context, dbNode *models.Node) error {
+	log.Debugln("Update heartbeat", dbNode.ID)
 	dbNode.LastHeartbeat = null.TimeFrom(time.Now())
 	dbNode.OfflineSince = null.NewTime(time.Now(), false)
 
@@ -213,6 +214,7 @@ func (c *DBClient) UpdateHeartbeat(ctx context.Context, dbNode *models.Node) err
 }
 
 func (c *DBClient) UpdateOfflineSince(ctx context.Context, dbNode *models.Node) error {
+	log.Debugln("Update node offline", dbNode.ID)
 	dbNode.OfflineSince = null.TimeFrom(time.Now())
 	_, err := dbNode.Update(ctx, c.handle, boil.Infer())
 	return err

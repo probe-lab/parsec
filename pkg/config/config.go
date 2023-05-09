@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -42,13 +45,17 @@ var Global = GlobalConfig{
 	DatabaseSSLMode:  "disable",
 }
 
-func (g GlobalConfig) ECSMetadata() (*ECSMetadata, error) {
+func (g GlobalConfig) ServerProcess() (*ServerProcess, error) {
 	if g.ecsMetadata != nil {
-		return g.ecsMetadata, nil
+		return &ServerProcess{
+			CPU:       g.ecsMetadata.Limits.CPU,
+			Memory:    g.ecsMetadata.Limits.Memory,
+			PrivateIP: g.ecsMetadata.GetPrivateIP(),
+		}, nil
 	}
 
 	var data []byte
-	if g.ECSContainerMetadata == "" {
+	if g.ECSContainerMetadataURIV4 != "" && g.ECSContainerMetadata == "" {
 
 		resp, err := http.Get(g.ECSContainerMetadataURIV4)
 		if err != nil {
@@ -63,8 +70,33 @@ func (g GlobalConfig) ECSMetadata() (*ECSMetadata, error) {
 		if err != nil {
 			return nil, fmt.Errorf("reading ecs metadata request body: %w", err)
 		}
-	} else {
+	} else if g.ECSContainerMetadata != "" {
 		data = []byte(g.ECSContainerMetadata)
+	} else {
+
+		hostname, err := os.Hostname()
+		if err != nil {
+			return nil, fmt.Errorf("get hostname: %w", err)
+		}
+		addrs, err := net.LookupHost(hostname)
+		if err != nil {
+			return nil, fmt.Errorf("lookup host %s: %w", hostname, err)
+		}
+
+		for _, addr := range addrs {
+			log.Infof("Found addr: %s\n", addr)
+		}
+
+		ip := net.ParseIP(addrs[0])
+		if ip == nil {
+			return nil, fmt.Errorf("parse ip: %s", addrs[0])
+		}
+
+		return &ServerProcess{
+			CPU:       1,
+			Memory:    1,
+			PrivateIP: ip,
+		}, nil
 	}
 
 	log.Debugln("ECS Metadata:")
@@ -77,7 +109,11 @@ func (g GlobalConfig) ECSMetadata() (*ECSMetadata, error) {
 
 	g.ecsMetadata = &md
 
-	return g.ecsMetadata, nil
+	return &ServerProcess{
+		CPU:       g.ecsMetadata.Limits.CPU,
+		Memory:    g.ecsMetadata.Limits.Memory,
+		PrivateIP: g.ecsMetadata.GetPrivateIP(),
+	}, nil
 }
 
 type ServerConfig struct {
@@ -92,6 +128,7 @@ type ServerConfig struct {
 	OptProv        bool
 	FirehoseStream string
 	FirehoseRegion string
+	StartupDelay   time.Duration
 }
 
 var Server = ServerConfig{
@@ -103,6 +140,7 @@ var Server = ServerConfig{
 	DHTServer:      false,
 	LevelDB:        "./leveldb",
 	FirehoseRegion: "us-east-1",
+	StartupDelay:   3 * time.Minute,
 }
 
 type SchedulerConfig struct {

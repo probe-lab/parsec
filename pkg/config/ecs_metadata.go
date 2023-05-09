@@ -1,6 +1,16 @@
 package config
 
-import log "github.com/sirupsen/logrus"
+import (
+	"net"
+
+	log "github.com/sirupsen/logrus"
+)
+
+type ServerProcess struct {
+	CPU       int64
+	Memory    int64
+	PrivateIP net.IP
+}
 
 type ECSMetadata struct {
 	DockerID      string            `json:"DockerId"`
@@ -43,7 +53,7 @@ type Network struct {
 	SubnetGatewayIpv4Address string   `json:"SubnetGatewayIpv4Address"`
 }
 
-func (ecsm ECSMetadata) GetPrivateIP() string {
+func (ecsm ECSMetadata) GetPrivateIP() net.IP {
 	for _, network := range ecsm.Networks {
 		if network.NetworkMode != "awsvpc" {
 			log.WithField("network", network).Warnln("Found network with mode", network.NetworkMode)
@@ -55,8 +65,13 @@ func (ecsm ECSMetadata) GetPrivateIP() string {
 			continue
 		}
 
-		return network.IPv4Addresses[0]
+		ip := net.ParseIP(network.IPv4Addresses[0])
+		if ip == nil {
+			log.WithField("ip", network.IPv4Addresses[0]).Warnln("Error parsing IP")
+		}
+
+		return ip
 	}
 
-	return ""
+	return nil
 }
