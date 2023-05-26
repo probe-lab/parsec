@@ -214,17 +214,23 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 	}
 
 	bo := backoff.NewExponentialBackOff()
-	bo.InitialInterval = 10 * time.Second
 	bo.RandomizationFactor = 0
 	bo.Multiplier = 1.3
 	bo.MaxInterval = 10 * time.Second
 	bo.MaxElapsedTime = 5 * time.Minute
+
+	select {
+	case <-ctx.Done():
+		return duration, nil
+	case <-time.After(10 * time.Second):
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			// at this point, it's likely that the data was already indexed
 			// so even if the context was cancelled, don't return the error
+			logEntry.Infoln("Context cancelled")
 			return duration, nil
 		case <-time.After(bo.NextBackOff()):
 		}

@@ -48,12 +48,14 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 	}
 
 	log.WithField("cid", content.CID.String()).Infoln("Start providing content...")
-	timeoutCtx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
-	defer cancel()
 
 	var resp ProvideResponse
 	switch pr.Routing {
 	case config.RoutingIPNI:
+
+		timeoutCtx, cancel := context.WithTimeout(r.Context(), 6*time.Minute) // 404 caching is set to 5mins
+		defer cancel()
+
 		dur, err := s.host.Announce(timeoutCtx, content.CID)
 		resp = ProvideResponse{
 			CID:      content.CID.String(),
@@ -67,6 +69,9 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 		log.WithField("cid", content.CID.String()).Infoln("Done announcing content...")
 
 	default:
+		timeoutCtx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
+		defer cancel()
+
 		start := time.Now()
 		err = s.host.DHT.Provide(timeoutCtx, content.CID, true)
 		end := time.Now()
