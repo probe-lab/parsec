@@ -61,13 +61,14 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 			CID:      content.CID.String(),
 			Duration: dur,
 		}
+		logEntry := log.WithField("cid", content.CID.String())
 		if err != nil {
+			logEntry = logEntry.WithError(err)
 			resp.Error = err.Error()
 		}
+		logEntry.Infoln("Done announcing content...")
 
 		latencies.WithLabelValues("provide_duration", string(config.RoutingIPNI), strconv.FormatBool(err == nil), r.Header.Get(headerSchedulerID)).Observe(dur.Seconds())
-		log.WithField("cid", content.CID.String()).Infoln("Done announcing content...")
-
 	default:
 		timeoutCtx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
 		defer cancel()

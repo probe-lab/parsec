@@ -213,17 +213,18 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 		return 0, ctx.Err()
 	}
 
-	bo := backoff.NewExponentialBackOff()
-	bo.RandomizationFactor = 0
-	bo.Multiplier = 1.3
-	bo.MaxInterval = 10 * time.Second
-	bo.MaxElapsedTime = 5 * time.Minute
-
+	logEntry.Infoln("Pausing for 10s")
 	select {
 	case <-ctx.Done():
 		return duration, nil
 	case <-time.After(10 * time.Second):
 	}
+
+	bo := backoff.NewExponentialBackOff()
+	bo.RandomizationFactor = 0
+	bo.Multiplier = 1.3
+	bo.MaxInterval = 10 * time.Second
+	bo.MaxElapsedTime = 5 * time.Minute
 
 	for {
 		select {
