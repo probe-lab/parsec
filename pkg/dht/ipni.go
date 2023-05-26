@@ -214,7 +214,7 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 	}
 
 	bo := backoff.NewExponentialBackOff()
-	bo.InitialInterval = 0
+	bo.InitialInterval = 10 * time.Second
 	bo.RandomizationFactor = 0
 	bo.Multiplier = 1.3
 	bo.MaxInterval = 10 * time.Second

@@ -57,13 +57,17 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	switch rr.Routing {
 	case config.RoutingIPNI:
 		start := time.Now()
-		_, err := s.host.IndexerLookup(ctx, c)
+		pr, err := s.host.IndexerLookup(ctx, c)
 		resp.Duration = time.Since(start)
 
 		logEntry = logEntry.WithField("dur", resp.Duration.Seconds())
 		if err != nil {
 			logEntry.Warnln("Failed looking up provider")
 			resp.Error = err.Error()
+		} else {
+			if len(pr.MultihashResults) == 0 {
+				resp.Error = "not found"
+			}
 		}
 		latencies.WithLabelValues("retrieval_ttfpr", string(config.RoutingIPNI), strconv.FormatBool(resp.Error == ""), r.Header.Get(headerSchedulerID)).Observe(resp.Duration.Seconds())
 	default:
