@@ -41,6 +41,18 @@ paths:
                   description: |
                     Binary data the server should use to generate a CID and publish a provider record for.
                     The Go implementation generates 1024 bytes of random data and puts into this JSON field.
+                Target:
+                  type: string
+                  enum:
+                    - DHT
+                    - IPNI
+                  default: DHT
+                  description: |
+                    Specifies the provide target type. If set to DHT (default when property != IPNI) the server
+                    will write provider records to the DHT. If set to IPNI, the server announces an advertisement
+                    to an InterPlanetary Network Indexer. To which specifically is part of the servers configuration
+                    and the client must know how the server is configured to know the specific IPNI (e.g, whether
+                    it's cid.contact or another one)
       responses:
         '200':
           description: |

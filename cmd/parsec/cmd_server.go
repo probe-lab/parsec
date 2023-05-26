@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/dennis-tra/parsec/pkg/db"
-
-	"github.com/dennis-tra/parsec/pkg/server"
-
-	"github.com/dennis-tra/parsec/pkg/config"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/dennis-tra/parsec/pkg/config"
+	"github.com/dennis-tra/parsec/pkg/db"
+	"github.com/dennis-tra/parsec/pkg/server"
 )
 
 // ServerCommand contains the crawl sub-command configuration.
@@ -104,6 +103,13 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.StartupDelay,
 			Destination: &config.Server.StartupDelay,
 		},
+		&cli.StringFlag{
+			Name:        "indexer-host",
+			EnvVars:     []string{"PARSEC_SERVER_INDEXER_HOST"},
+			DefaultText: config.Server.IndexerHost,
+			Value:       config.Server.IndexerHost,
+			Destination: &config.Server.IndexerHost,
+		},
 	},
 }
 
@@ -133,5 +139,6 @@ func ServerAction(c *cli.Context) error {
 
 	<-c.Context.Done()
 
+	log.Infoln("Shutting server down")
 	return n.Shutdown(context.Background())
 }

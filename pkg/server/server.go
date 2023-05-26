@@ -122,6 +122,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	errg := errgroup.Group{}
 
 	errg.Go(func() error {
+		if s.server == nil {
+			return nil
+		}
 		log.Infoln("Stopping server...")
 		return s.server.Shutdown(ctx)
 	})
@@ -185,7 +188,8 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	router.GET("/readiness", s.readiness)
 
 	s.server = &http.Server{
-		Handler: s.metricsHandler(s.logHandler(router)),
+		Handler:     s.metricsHandler(s.logHandler(router)),
+		BaseContext: func(listener net.Listener) context.Context { return ctx },
 	}
 
 	defer func() {

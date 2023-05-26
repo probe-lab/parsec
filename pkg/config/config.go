@@ -129,6 +129,7 @@ type ServerConfig struct {
 	FirehoseStream string
 	FirehoseRegion string
 	StartupDelay   time.Duration
+	IndexerHost    string
 }
 
 var Server = ServerConfig{
@@ -141,12 +142,22 @@ var Server = ServerConfig{
 	LevelDB:        "./leveldb",
 	FirehoseRegion: "us-east-1",
 	StartupDelay:   3 * time.Minute,
+	IndexerHost:    "",
 }
 
+type Routing string
+
+const (
+	RoutingDHT  Routing = "DHT"
+	RoutingIPNI Routing = "IPNI"
+)
+
 type SchedulerConfig struct {
-	Fleets *cli.StringSlice
+	Fleets  *cli.StringSlice
+	Routing string
 }
 
 var Scheduler = SchedulerConfig{
-	Fleets: cli.NewStringSlice(),
+	Fleets:  cli.NewStringSlice(),
+	Routing: string(RoutingDHT),
 }

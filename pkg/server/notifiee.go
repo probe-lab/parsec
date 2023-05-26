@@ -50,7 +50,7 @@ func (s *Server) Disconnected(n network.Network, conn network.Conn) {
 	// go s.trackConnectionEvent(conn, "disconnect")
 }
 
-func (s Server) trackConnectionEvent(conn network.Conn, evtType string) {
+func (s *Server) trackConnectionEvent(conn network.Conn, evtType string) {
 	now := time.Now()
 	s.host.BasicHost.IDService().IdentifyConn(conn)
 

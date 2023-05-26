@@ -12,6 +12,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/dennis-tra/parsec/pkg/config"
 	"github.com/dennis-tra/parsec/pkg/dht"
 	"github.com/dennis-tra/parsec/pkg/util"
 )
@@ -22,6 +23,7 @@ import (
 
 type ProvideRequest struct {
 	Content []byte
+	Routing config.Routing
 }
 
 func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -49,21 +51,38 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 	timeoutCtx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
 	defer cancel()
 
-	start := time.Now()
-	err = s.host.DHT.Provide(timeoutCtx, content.CID, true)
-	end := time.Now()
+	var resp ProvideResponse
+	switch pr.Routing {
+	case config.RoutingIPNI:
+		dur, err := s.host.Announce(timeoutCtx, content.CID)
+		resp = ProvideResponse{
+			CID:      content.CID.String(),
+			Duration: dur,
+		}
+		if err != nil {
+			resp.Error = err.Error()
+		}
 
-	latencies.WithLabelValues("provide_duration", strconv.FormatBool(err == nil), r.Header.Get(headerSchedulerID)).Observe(end.Sub(start).Seconds())
-	log.WithField("cid", content.CID.String()).Infoln("Done providing content...")
+		latencies.WithLabelValues("provide_duration", string(config.RoutingIPNI), strconv.FormatBool(err == nil), r.Header.Get(headerSchedulerID)).Observe(dur.Seconds())
+		log.WithField("cid", content.CID.String()).Infoln("Done announcing content...")
 
-	resp := ProvideResponse{
-		CID:              content.CID.String(),
-		Duration:         end.Sub(start),
-		RoutingTableSize: dht.RoutingTableSize(s.host.DHT),
-	}
+	default:
+		start := time.Now()
+		err = s.host.DHT.Provide(timeoutCtx, content.CID, true)
+		end := time.Now()
 
-	if err != nil {
-		resp.Error = err.Error()
+		latencies.WithLabelValues("provide_duration", string(config.RoutingDHT), strconv.FormatBool(err == nil), r.Header.Get(headerSchedulerID)).Observe(end.Sub(start).Seconds())
+		log.WithField("cid", content.CID.String()).Infoln("Done providing content...")
+
+		resp = ProvideResponse{
+			CID:              content.CID.String(),
+			Duration:         end.Sub(start),
+			RoutingTableSize: dht.RoutingTableSize(s.host.DHT),
+		}
+
+		if err != nil {
+			resp.Error = err.Error()
+		}
 	}
 
 	data, err = json.Marshal(resp)
@@ -83,6 +102,7 @@ func (s *Server) provide(rw http.ResponseWriter, r *http.Request, params httprou
 func (c *Client) Provide(ctx context.Context, content *util.Content) (*ProvideResponse, error) {
 	pr := &ProvideRequest{
 		Content: content.Raw,
+		Routing: c.routing,
 	}
 
 	data, err := json.Marshal(pr)

@@ -16,11 +16,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dennis-tra/parsec/pkg/config"
 	"github.com/dennis-tra/parsec/pkg/dht"
 	"github.com/dennis-tra/parsec/pkg/util"
 )
 
-type RetrieveRequest struct{}
+type RetrieveRequest struct {
+	Routing config.Routing
+}
 
 func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	ctx := r.Context()
@@ -51,23 +54,36 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 	logEntry.Infoln("Start finding providers")
 
 	// here's where the magic happens
-	start := time.Now()
-	provider := <-s.host.DHT.FindProvidersAsync(ctx, c, 1)
-	resp.Duration = time.Since(start)
+	switch rr.Routing {
+	case config.RoutingIPNI:
+		start := time.Now()
+		_, err := s.host.IndexerLookup(ctx, c)
+		resp.Duration = time.Since(start)
 
-	logEntry = logEntry.WithField("dur", resp.Duration.Seconds())
+		logEntry = logEntry.WithField("dur", resp.Duration.Seconds())
+		if err != nil {
+			logEntry.Warnln("Failed looking up provider")
+			resp.Error = err.Error()
+		}
+		latencies.WithLabelValues("retrieval_ttfpr", string(config.RoutingIPNI), strconv.FormatBool(resp.Error == ""), r.Header.Get(headerSchedulerID)).Observe(resp.Duration.Seconds())
+	default:
+		start := time.Now()
+		provider := <-s.host.DHT.FindProvidersAsync(ctx, c, 1)
+		resp.Duration = time.Since(start)
 
-	if errors.Is(provider.ID.Validate(), peer.ErrEmptyPeerID) {
-		resp.Error = "not found"
-		logEntry.Infoln("Didn't find provider")
-	} else {
-		s.host.Network().ClosePeer(provider.ID)
-		s.host.Peerstore().RemovePeer(provider.ID)
-		s.host.Peerstore().ClearAddrs(provider.ID)
-		logEntry.WithField("provider", util.FmtPeerID(provider.ID)).Infoln("Found provider")
+		logEntry = logEntry.WithField("dur", resp.Duration.Seconds())
+
+		if errors.Is(provider.ID.Validate(), peer.ErrEmptyPeerID) {
+			resp.Error = "not found"
+			logEntry.Infoln("Didn't find provider")
+		} else {
+			s.host.Network().ClosePeer(provider.ID)
+			s.host.Peerstore().RemovePeer(provider.ID)
+			s.host.Peerstore().ClearAddrs(provider.ID)
+			logEntry.WithField("provider", util.FmtPeerID(provider.ID)).Infoln("Found provider")
+		}
+		latencies.WithLabelValues("retrieval_ttfpr", string(config.RoutingDHT), strconv.FormatBool(resp.Error == ""), r.Header.Get(headerSchedulerID)).Observe(resp.Duration.Seconds())
 	}
-
-	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(resp.Error == ""), r.Header.Get(headerSchedulerID)).Observe(resp.Duration.Seconds())
 
 	data, err = json.Marshal(resp)
 	if err != nil {
@@ -84,7 +100,9 @@ func (s *Server) retrieve(rw http.ResponseWriter, r *http.Request, params httpro
 }
 
 func (c *Client) Retrieve(ctx context.Context, content cid.Cid) (*RetrievalResponse, error) {
-	rr := &RetrieveRequest{}
+	rr := &RetrieveRequest{
+		Routing: c.routing,
+	}
 
 	data, err := json.Marshal(rr)
 	if err != nil {

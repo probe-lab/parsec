@@ -27,6 +27,14 @@ var SchedulerCommand = &cli.Command{
 			Value:       config.Scheduler.Fleets,
 			Destination: config.Scheduler.Fleets,
 		},
+		&cli.StringFlag{
+			Name:        "routing",
+			Usage:       "The routing sub system to use for provides and retrievals (DHT or IPNI)",
+			EnvVars:     []string{"PARSEC_SCHEDULER_ROUTING"},
+			DefaultText: config.Scheduler.Routing,
+			Value:       config.Scheduler.Routing,
+			Destination: &config.Scheduler.Routing,
+		},
 	},
 	Action: SchedulerAction,
 }
@@ -77,7 +85,7 @@ func SchedulerAction(c *cli.Context) error {
 
 		clients := []*server.Client{}
 		for _, node := range dbNodes {
-			client := server.NewClient(node.IPAddress, node.ServerPort, strings.Join(config.Scheduler.Fleets.Value(), ","))
+			client := server.NewClient(node.IPAddress, node.ServerPort, strings.Join(config.Scheduler.Fleets.Value(), ","), config.Routing(config.Scheduler.Routing))
 
 			if err = client.Readiness(c.Context); err != nil {
 				log.WithField("nodeID", node.ID).WithError(err).Warnln("Node not ready")
@@ -139,18 +147,28 @@ func SchedulerAction(c *cli.Context) error {
 			retrievalClient := clients[idx]
 
 			errg.Go(func() error {
-				retrieval, err := retrievalClient.Retrieve(errCtx, content.CID)
-				issuedRetrievals.WithLabelValues(strconv.FormatBool(err == nil)).Inc()
-				if err != nil {
-					log.WithField("nodeID", retrievalNode.ID).WithError(err).Warnln("Failed to retrieve record")
-					if err := dbc.UpdateOfflineSince(c.Context, retrievalNode); err != nil {
-						log.WithField("nodeID", retrievalNode.ID).WithError(err).Warnln("Couldn't put retrieval node offline")
-					}
-					return nil
+				var retries int
+				switch config.Scheduler.Routing {
+				case string(config.RoutingIPNI):
+					retries = 5
+				case string(config.RoutingDHT):
+					retries = 1
 				}
 
-				if _, err := dbc.InsertRetrieval(errCtx, retrievalNode.ID, retrieval.CID, retrieval.Duration.Seconds(), retrieval.RoutingTableSize, retrieval.Error, dbScheduler.ID); err != nil {
-					return fmt.Errorf("insert retrieval: %w", err)
+				for i := 0; i < retries; i++ {
+					retrieval, err := retrievalClient.Retrieve(errCtx, content.CID)
+					issuedRetrievals.WithLabelValues(strconv.FormatBool(err == nil)).Inc()
+					if err != nil {
+						log.WithField("nodeID", retrievalNode.ID).WithError(err).Warnln("Failed to retrieve record")
+						if err := dbc.UpdateOfflineSince(c.Context, retrievalNode); err != nil {
+							log.WithField("nodeID", retrievalNode.ID).WithError(err).Warnln("Couldn't put retrieval node offline")
+						}
+						return nil
+					}
+
+					if _, err := dbc.InsertRetrieval(errCtx, retrievalNode.ID, retrieval.CID, retrieval.Duration.Seconds(), retrieval.RoutingTableSize, retrieval.Error, dbScheduler.ID); err != nil {
+						return fmt.Errorf("insert retrieval: %w", err)
+					}
 				}
 
 				return nil
