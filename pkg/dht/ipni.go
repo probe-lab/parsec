@@ -163,8 +163,13 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 	logEntry = logEntry.WithField("probe", fmtMultihash(probe)).WithField("ctxID", fmtContextID(contextID))
 	logEntry.Infoln("Notify Engine")
 
+	prov := &peer.AddrInfo{
+		ID:    h.ID(),
+		Addrs: h.Addrs(),
+	}
+
 	start := time.Now()
-	adCid, err := h.indexer.engine.NotifyPut(ctx, nil, contextID, metadata.Default.New(metadata.Bitswap{}))
+	adCid, err := h.indexer.engine.NotifyPut(ctx, prov, contextID, metadata.Default.New(metadata.Bitswap{}))
 	if err != nil {
 		return 0, fmt.Errorf("notify engine: %w", err)
 	}
@@ -180,13 +185,9 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 		}
 
 		logEntry := log.WithFields(log.Fields{
-			"selfID":     state.SelfPeer().String()[:16],
-			"otherID":    state.OtherPeer().String()[:16],
-			"code":       evt.Code.String(),
-			"status":     state.Status().String(),
-			"tranID":     state.TransferID(),
-			"sentCIDs":   state.SentCidsTotal(),
-			"queuedCIDs": state.QueuedCidsTotal(),
+			"otherID": state.OtherPeer().String()[:16],
+			"code":    evt.Code.String(),
+			"status":  state.Status().String(),
 		})
 		logEntry.Debugln("Received event")
 
