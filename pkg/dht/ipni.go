@@ -187,8 +187,9 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 	logEntry.Infoln("Waiting for indexer to reach out")
 	select {
 	case <-ctx.Done():
+		logEntry.Infoln("Indexer did not reach out/complete the sync with us.")
 	case <-done:
-		logEntry.Infoln("Indexer to reached out to us!")
+		logEntry.Infoln("Indexer reached out to us!")
 	}
 	duration := time.Since(start)
 
