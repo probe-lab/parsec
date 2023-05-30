@@ -178,7 +178,18 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 		if !state.BaseCID().Equals(adCid) {
 			return
 		}
-		logEntry.WithField("peerID", state.OtherPeer().String()[:16]).WithField("code", evt.Code.String()).Debugln("Received event")
+
+		logEntry := log.WithFields(log.Fields{
+			"selfID":     state.SelfPeer().String()[:16],
+			"otherID":    state.OtherPeer().String()[:16],
+			"code":       evt.Code.String(),
+			"status":     state.Status().String(),
+			"tranID":     state.TransferID(),
+			"sentCIDs":   state.SentCidsTotal(),
+			"queuedCIDs": state.QueuedCidsTotal(),
+		})
+		logEntry.Debugln("Received event")
+
 		if evt.Code == datatransfer.CleanupComplete {
 			done <- struct{}{}
 		}
