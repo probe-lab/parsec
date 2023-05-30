@@ -13,6 +13,7 @@ import (
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
 	"github.com/libp2p/go-libp2p-kad-dht/metrics"
+	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/routing"
 	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
@@ -121,7 +122,34 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 
 	log.WithField("localID", newHost.ID()).Info("Initialized new libp2p host")
 
+	if err = newHost.subscribeForEvents(); err != nil {
+		return nil, fmt.Errorf("subscribe for events: %w", err)
+	}
+
 	return newHost, nil
+}
+
+func (h *Host) subscribeForEvents() error {
+	sub, err := h.EventBus().Subscribe([]interface{}{new(event.EvtLocalAddressesUpdated), new(event.EvtLocalReachabilityChanged)})
+	if err != nil {
+		return fmt.Errorf("event bus subscription: %w", err)
+	}
+
+	go func() {
+		for evt := range sub.Out() {
+			switch evt := evt.(type) {
+			case event.EvtLocalAddressesUpdated:
+				log.Infoln("libp2p host Multiaddresses updated:")
+				for i, update := range evt.Current {
+					log.Infof("  [%d] %s (%d)\n", i, update.Address, update.Action)
+				}
+			case event.EvtLocalReachabilityChanged:
+				log.Infoln("New reachability:", evt.Reachability.String())
+			}
+		}
+	}()
+
+	return nil
 }
 
 func (h *Host) Close() error {
