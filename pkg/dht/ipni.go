@@ -185,7 +185,7 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 		}
 
 		logEntry := log.WithFields(log.Fields{
-			"otherID": state.OtherPeer().String()[:16],
+			"otherID": state.OtherPeer().String(),
 			"code":    evt.Code.String(),
 			"status":  state.Status().String(),
 		})
