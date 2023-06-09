@@ -9,9 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipni/go-libipni/find/model"
-
-	"github.com/cenkalti/backoff/v4"
 	datatransfer "github.com/filecoin-project/go-data-transfer/v2"
 	dtimpl "github.com/filecoin-project/go-data-transfer/v2/impl"
 	dtnetwork "github.com/filecoin-project/go-data-transfer/v2/network"
@@ -23,6 +20,7 @@ import (
 	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
 	"github.com/ipni/go-libipni/apierror"
 	client "github.com/ipni/go-libipni/find/client/http"
+	"github.com/ipni/go-libipni/find/model"
 	"github.com/ipni/go-libipni/metadata"
 	provider "github.com/ipni/index-provider"
 	"github.com/ipni/index-provider/engine"
@@ -100,18 +98,12 @@ func (h *Host) multiHashLister(ctx context.Context, p peer.ID, contextID []byte)
 	defer h.multihashesLk.RUnlock()
 
 	// Looking up the multihash for the given contextID
-	m, found := h.multihashes[string(contextID)]
+	mhs, found := h.multihashes[string(contextID)]
 	if !found {
 		return nil, fmt.Errorf("unknown context ID")
 	}
 
-	// Generate probe multihash by hashing the multihash again
-	probe, err := genProbeMultihash(m)
-	if err != nil {
-		return nil, fmt.Errorf("gen probe digest")
-	}
-
-	return provider.SliceMultihashIterator([]mh.Multihash{m, probe}), nil
+	return provider.SliceMultihashIterator(mhs), nil
 }
 
 func (h *Host) IndexerLookup(ctx context.Context, c cid.Cid) (*model.FindResponse, error) {
@@ -138,11 +130,12 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 	// publishing the given CID + the probe multihash. Then we poll the API for
 	// the probe multihash. If that hash is indexed, we can be sure that the
 	// given CID was also indexed
-	probe, err := genProbeMultihash(c.Hash())
+	probeCount := 300 // 1 per second for the 5-minutes negative cache
+	probes, err := genProbes(c.Hash(), probeCount)
 	if err != nil {
-		return 0, fmt.Errorf("gen probe digest: %w", err)
+		return 0, fmt.Errorf("gen probes digest: %w", err)
 	}
-	logEntry.Infoln("  Probe:", probe.B58String())
+	logEntry.Infoln("  Probes:", probeCount)
 
 	// The contextID just needs to be unique per multihash
 	contextID := []byte(fmt.Sprintf("parsec-%d", rand.Uint64()))
@@ -155,12 +148,12 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 		h.multihashesLk.Unlock()
 		return 0, provider.ErrAlreadyAdvertised
 	} else {
-		h.multihashes[string(contextID)] = c.Hash()
+		h.multihashes[string(contextID)] = append([]mh.Multihash{c.Hash()}, probes...)
 	}
 	h.multihashesLk.Unlock()
 
 	// Notify engine of new data
-	logEntry = logEntry.WithField("probe", fmtMultihash(probe)).WithField("ctxID", fmtContextID(contextID))
+	logEntry = logEntry.WithField("ctxID", fmtContextID(contextID))
 	logEntry.Infoln("Notify Engine")
 
 	prov := &peer.AddrInfo{
@@ -226,39 +219,29 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 		return 0, ctx.Err()
 	}
 
-	logEntry.Infoln("Pausing for 10s")
-	select {
-	case <-ctx.Done():
-		return duration, nil
-	case <-time.After(10 * time.Second):
-	}
-
-	bo := backoff.NewExponentialBackOff()
-	bo.RandomizationFactor = 0
-	bo.Multiplier = 1.3
-	bo.MaxInterval = 10 * time.Second
-	bo.MaxElapsedTime = 5 * time.Minute
-
+	probeIdx := 0
 	for {
+		logEntry.Infoln("Pausing for 1s")
 		select {
 		case <-ctx.Done():
 			// at this point, it's likely that the data was already indexed
 			// so even if the context was cancelled, don't return the error
 			logEntry.Infoln("Context cancelled")
 			return duration, nil
-		case <-time.After(bo.NextBackOff()):
+		case <-time.After(time.Second):
 		}
 
-		logEntry.Infoln("Getting probe Multihash")
+		logEntry.WithField("probeIdx", probeIdx).Infoln("Getting probe Multihash")
 
-		resp, err := h.indexer.client.Find(ctx, probe)
+		resp, err := h.indexer.client.Find(ctx, probes[probeIdx])
+		// update probe index for new round
+		probeIdx = (probeIdx + 1) % probeCount
 		if aErr, ok := err.(*apierror.Error); ok && aErr.Status() == http.StatusNotFound {
 			logEntry.Infoln("Probe Multihash not found")
 			continue
 		} else if err != nil {
 			return 0, fmt.Errorf("get probe multihash %s: %w", h.indexer.hostname, err)
 		} else {
-			logEntry.Infoln("Checking presence of provider ID")
 			for _, mhRes := range resp.MultihashResults {
 				for _, pRes := range mhRes.ProviderResults {
 					if pRes.Provider.ID == h.ID() {
@@ -267,7 +250,6 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 					}
 				}
 			}
-
 			logEntry.Infoln("Provider not in response")
 			continue
 		}

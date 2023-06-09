@@ -35,7 +35,7 @@ type Host struct {
 	BasicHost     *basichost.BasicHost
 	indexer       *Indexer
 	multihashesLk sync.RWMutex
-	multihashes   map[string]mh.Multihash
+	multihashes   map[string][]mh.Multihash
 }
 
 func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
@@ -105,7 +105,7 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 		Host:        routedhost.Wrap(basicHost, dht),
 		BasicHost:   basicHost.(*basichost.BasicHost),
 		DHT:         dht,
-		multihashes: map[string]mh.Multihash{},
+		multihashes: map[string][]mh.Multihash{},
 	}
 
 	if config.Server.IndexerHost != "" {
@@ -215,8 +215,19 @@ func RoutingTableSize(dht routing.Routing) int {
 	panic("unrecognise DHT client implementation")
 }
 
-func genProbeMultihash(m mh.Multihash) (mh.Multihash, error) {
-	return mh.Sum(m, mh.SHA2_256, -1)
+func genProbes(start mh.Multihash, count int) ([]mh.Multihash, error) {
+	probes := make([]mh.Multihash, count)
+	hash := start
+	for i := 0; i < count; i++ {
+		probe, err := mh.Sum(hash, mh.SHA2_256, -1)
+		if err != nil {
+			return nil, fmt.Errorf("gen probe digest: %w", err)
+		}
+		probes[i] = probe
+		hash = probe
+	}
+
+	return probes, nil
 }
 
 func fmtCid(c cid.Cid) string {
