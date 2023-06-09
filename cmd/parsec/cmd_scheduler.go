@@ -133,6 +133,11 @@ func SchedulerAction(c *cli.Context) error {
 			return fmt.Errorf("insert provide: %w", err)
 		}
 
+		if provide.Error != "" {
+			log.WithField("error", provide.Error).Infoln("Failed to provide content")
+			continue
+		}
+
 		// let everyone take a breath
 		time.Sleep(10 * time.Second)
 
