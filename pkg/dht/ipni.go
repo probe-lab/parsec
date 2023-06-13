@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"sync"
 	"time"
 
 	datatransfer "github.com/filecoin-project/go-data-transfer/v2"
@@ -172,7 +171,7 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 
 	done := make(chan struct{})
 	// wait for indexer to reach out to us
-	unsubFn := h.indexer.dtManager.SubscribeToEvents(func(evt datatransfer.Event, state datatransfer.ChannelState) {
+	unsubscribe := h.indexer.dtManager.SubscribeToEvents(func(evt datatransfer.Event, state datatransfer.ChannelState) {
 		if !state.BaseCID().Equals(adCid) {
 			return
 		}
@@ -198,25 +197,20 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 	}
 	duration := time.Since(start)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
 	go func() {
-		drainChannel(done)
-		wg.Done()
+		logEntry.Infoln("Draining events...")
+		for range done {
+			logEntry.Infoln("Drained cleanup complete event")
+		}
+		logEntry.Infoln("Draining events done!")
 	}()
-
-	wg.Add(1)
-	go func() {
-		unsubFn()
-		wg.Done()
-	}()
-
-	wg.Wait()
-	drainChannel(done)
+	logEntry.Infoln("Unsubscribing from GraphSync events")
+	unsubscribe()
 	close(done)
+	logEntry.Infoln("Unsubscribing done!")
 
 	if ctx.Err() != nil {
-		return 0, ctx.Err()
+		return duration, ctx.Err()
 	}
 
 	probeIdx := 0
@@ -252,17 +246,6 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 			}
 			logEntry.Infoln("Provider not in response")
 			continue
-		}
-	}
-}
-
-func drainChannel[T any](c chan T) {
-	for {
-		select {
-		case <-c:
-			continue
-		default:
-			return
 		}
 	}
 }
