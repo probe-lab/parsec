@@ -97,12 +97,12 @@ func (h *Host) multiHashLister(ctx context.Context, p peer.ID, contextID []byte)
 	defer h.multihashesLk.RUnlock()
 
 	// Looking up the multihash for the given contextID
-	mhs, found := h.multihashes[string(contextID)]
+	entry, found := h.multihashes[string(contextID)]
 	if !found {
 		return nil, fmt.Errorf("unknown context ID")
 	}
 
-	return provider.SliceMultihashIterator(mhs), nil
+	return provider.SliceMultihashIterator(entry.mhs), nil
 }
 
 func (h *Host) IndexerLookup(ctx context.Context, c cid.Cid) (*model.FindResponse, error) {
@@ -147,7 +147,10 @@ func (h *Host) Announce(ctx context.Context, c cid.Cid) (time.Duration, error) {
 		h.multihashesLk.Unlock()
 		return 0, provider.ErrAlreadyAdvertised
 	} else {
-		h.multihashes[string(contextID)] = append([]mh.Multihash{c.Hash()}, probes...)
+		h.multihashes[string(contextID)] = multiHashEntry{
+			ts:  time.Now(),
+			mhs: append([]mh.Multihash{c.Hash()}, probes...),
+		}
 	}
 	h.multihashesLk.Unlock()
 

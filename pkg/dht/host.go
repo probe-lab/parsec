@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-cid"
 	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
@@ -35,7 +34,12 @@ type Host struct {
 	BasicHost     *basichost.BasicHost
 	indexer       *Indexer
 	multihashesLk sync.RWMutex
-	multihashes   map[string][]mh.Multihash
+	multihashes   map[string]multiHashEntry
+}
+
+type multiHashEntry struct {
+	ts  time.Time
+	mhs []mh.Multihash
 }
 
 func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
@@ -105,7 +109,7 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 		Host:        routedhost.Wrap(basicHost, dht),
 		BasicHost:   basicHost.(*basichost.BasicHost),
 		DHT:         dht,
-		multihashes: map[string][]mh.Multihash{},
+		multihashes: map[string]multiHashEntry{},
 	}
 
 	if config.Server.IndexerHost != "" {
@@ -119,6 +123,7 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 
 	go newHost.measureNetworkSize(ctx)
 	go newHost.measureDiskUsage(ctx, ds)
+	go newHost.gcMultihashEntries(ctx)
 
 	log.WithField("localID", newHost.ID()).Info("Initialized new libp2p host")
 
@@ -181,23 +186,43 @@ func (h *Host) measureDiskUsage(ctx context.Context, ds *leveldb.Datastore) {
 
 func (h *Host) measureNetworkSize(ctx context.Context) {
 	idht, ok := h.DHT.(*kaddht.IpfsDHT)
-	if ok {
-		go func() {
-			t := time.NewTicker(time.Minute)
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-t.C:
-				}
+	if !ok {
+		return
+	}
 
-				netSize, err := idht.NetworkSize()
-				if err != nil {
-					continue
-				}
-				netSizeGauge.Set(float64(netSize))
+	t := time.NewTicker(time.Minute)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+
+		netSize, err := idht.NetworkSize()
+		if err != nil {
+			continue
+		}
+		netSizeGauge.Set(float64(netSize))
+	}
+}
+
+func (h *Host) gcMultihashEntries(ctx context.Context) {
+	t := time.NewTicker(time.Hour)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+
+		h.multihashesLk.Lock()
+		for contextID, entry := range h.multihashes {
+			if entry.ts.After(time.Now().Add(-time.Hour)) {
+				continue
 			}
-		}()
+			delete(h.multihashes, contextID)
+		}
+		h.multihashesLk.Unlock()
 	}
 }
 
@@ -228,14 +253,6 @@ func genProbes(start mh.Multihash, count int) ([]mh.Multihash, error) {
 	}
 
 	return probes, nil
-}
-
-func fmtCid(c cid.Cid) string {
-	str := c.String()
-	if len(str) >= 16 {
-		return str[:16]
-	}
-	return str
 }
 
 func fmtContextID(contextID []byte) string {
