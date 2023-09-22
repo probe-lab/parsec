@@ -47,9 +47,20 @@ type Server struct {
 var _ network.Notifiee = (*Server)(nil)
 
 func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*Server, error) {
-	ctx, cancel := context.WithCancel(ctx)
+	var (
+		err error
+		fh  *firehose.Firehose
+	)
 
-	parsecHost, err := dht.New(ctx, conf)
+	if conf.FirehoseRegion != "" && conf.FirehoseStream != "" {
+		fh, err = initFirehose(conf.FirehoseRegion, conf.FirehoseStream)
+		if err != nil {
+			return nil, fmt.Errorf("init firehose: %w", err)
+		}
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	parsecHost, err := dht.New(ctx, fh, conf)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("new host: %w", err)
@@ -78,35 +89,37 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		dbNode: dbNode,
 		stream: conf.FirehoseStream,
 		done:   make(chan struct{}),
+		fh:     fh,
 	}
 
-	if conf.FirehoseStream != "" {
-
-		log.Infoln("Initializing firehose stream access")
-		awsSession, err := session.NewSession(&aws.Config{
-			Region: aws.String(conf.FirehoseRegion),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("new aws session: %w", err)
-		}
-		s.fh = firehose.New(awsSession)
-
-		streamName := aws.String(conf.FirehoseStream)
-
-		log.Infoln("Checking firehose stream permissions")
-		_, err = s.fh.DescribeDeliveryStream(&firehose.DescribeDeliveryStreamInput{
-			DeliveryStreamName: streamName,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("describing firehose stream: %w", err)
-		}
-
+	if fh != nil {
 		parsecHost.Network().Notify(s)
-	} else {
-		log.Infoln("No firehose stream configured.")
 	}
 
 	return s, nil
+}
+
+func initFirehose(region, stream string) (*firehose.Firehose, error) {
+	log.Infoln("Initializing firehose stream access")
+	awsSession, err := session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("new aws session: %w", err)
+	}
+	fh := firehose.New(awsSession)
+
+	streamName := aws.String(stream)
+	log.WithField("stream", streamName).Infoln("Checking firehose stream permissions")
+	_, err = fh.DescribeDeliveryStream(&firehose.DescribeDeliveryStreamInput{
+		DeliveryStreamName: streamName,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("describing firehose stream: %w", err)
+	}
+
+	return fh, nil
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

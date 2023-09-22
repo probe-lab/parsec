@@ -23,7 +23,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
 
+	"github.com/aws/aws-sdk-go/service/firehose"
 	"github.com/dennis-tra/parsec/pkg/config"
+	"github.com/libp2p/go-libp2p-kad-dht/providers"
 )
 
 const ipfsProtocolPrefix = "/ipfs"
@@ -42,7 +44,7 @@ type multiHashEntry struct {
 	mhs []mh.Multihash
 }
 
-func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
+func New(ctx context.Context, fh *firehose.Firehose, conf config.ServerConfig) (*Host, error) {
 	// Don't listen on quic-v1 since it's not supported by IPNI at the moment
 	addrs := []string{
 		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", conf.PeerPort),
@@ -84,6 +86,16 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 		mode = kaddht.ModeServer
 	}
 
+	origProvStore, err := providers.NewProviderManager(ctx, basicHost.ID(), basicHost.Peerstore(), ds)
+	if err != nil {
+		return nil, fmt.Errorf("initializing default provider manager: %w", err)
+	}
+
+	wrapProvStore, err := NewProviderStore(ctx, origProvStore, basicHost, fh, conf)
+	if err != nil {
+		return nil, fmt.Errorf("initializing wrapped provider store: %w", err)
+	}
+
 	var dht routing.Routing
 	if conf.FullRT {
 		log.Infoln("Using full accelerated DHT client")
@@ -92,6 +104,7 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 			kaddht.BucketSize(20),
 			kaddht.Mode(mode),
 			kaddht.Datastore(ds),
+			kaddht.ProviderStore(wrapProvStore),
 		))
 	} else {
 		log.Infoln("Using standard DHT client")
@@ -158,8 +171,10 @@ func (h *Host) subscribeForEvents() error {
 }
 
 func (h *Host) Close() error {
-	if err := h.indexer.engine.Shutdown(); err != nil {
-		log.WithError(err).WithField("indexer", h.indexer.hostname).Warnln("Failed to shut down indexer engine")
+	if h.indexer != nil {
+		if err := h.indexer.engine.Shutdown(); err != nil {
+			log.WithError(err).WithField("indexer", h.indexer.hostname).Warnln("Failed to shut down indexer engine")
+		}
 	}
 
 	return h.Host.Close()
