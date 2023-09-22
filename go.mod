@@ -6,7 +6,6 @@ require (
 	contrib.go.opencensus.io/exporter/prometheus v0.4.2
 	contrib.go.opencensus.io/integrations/ocsql v0.1.7
 	github.com/aws/aws-sdk-go v1.36.30
-	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/filecoin-project/go-data-transfer/v2 v2.0.0-rc7
 	github.com/friendsofgo/errors v0.9.2
 	github.com/golang-migrate/migrate/v4 v4.15.2
