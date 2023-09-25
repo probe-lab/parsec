@@ -83,7 +83,7 @@ func NewProviderStore(ctx context.Context, pstore providers.ProviderStore, h hos
 	p := &ProviderStore{
 		fh:        fh,
 		store:     pstore,
-		batchSize: 1000,
+		batchSize: 500, // 500 is maximum
 		batchTime: 30 * time.Second,
 		batch:     []*AddProviderRecord{},
 		insert:    make(chan *AddProviderRecord),
@@ -118,9 +118,18 @@ func (p *ProviderStore) loop(ctx context.Context) {
 }
 
 func (p *ProviderStore) flush() {
-	log.Infoln("Flushing RPCs to firehose")
-	putRecords := make([]*firehose.Record, len(p.batch))
+	logEntry := log.WithFields(log.Fields{
+		"size":   len(p.batch),
+		"stream": p.conf.FirehoseStream,
+	})
+	logEntry.Infoln("Flushing RPCs to firehose")
 
+	if len(p.batch) == 0 {
+		logEntry.Infoln("No records to flush...")
+		return
+	}
+
+	putRecords := make([]*firehose.Record, len(p.batch))
 	for i, addRec := range p.batch {
 		dat, err := json.Marshal(addRec)
 		if err != nil {
@@ -129,12 +138,14 @@ func (p *ProviderStore) flush() {
 		putRecords[i] = &firehose.Record{Data: dat}
 	}
 
+	logEntry.Infoln("Example record:", string(putRecords[0].Data))
+
 	_, err := p.fh.PutRecordBatch(&firehose.PutRecordBatchInput{
 		DeliveryStreamName: aws.String(p.conf.FirehoseStream),
 		Records:            putRecords,
 	})
 	if err != nil {
-		log.WithError(err).Warnln("Couldn't put RPC event")
+		logEntry.WithError(err).Warnln("Couldn't put RPC event")
 	}
 
 	p.batch = []*AddProviderRecord{}
