@@ -91,9 +91,15 @@ func New(ctx context.Context, fh *firehose.Firehose, conf config.ServerConfig) (
 		return nil, fmt.Errorf("initializing default provider manager: %w", err)
 	}
 
-	wrapProvStore, err := NewProviderStore(ctx, origProvStore, basicHost, fh, conf)
-	if err != nil {
-		return nil, fmt.Errorf("initializing wrapped provider store: %w", err)
+	var provStore providers.ProviderStore
+	if conf.FirehoseRPCs {
+		wrapProvStore, err := NewProviderStore(ctx, origProvStore, basicHost, fh, conf)
+		if err != nil {
+			return nil, fmt.Errorf("initializing wrapped provider store: %w", err)
+		}
+		provStore = wrapProvStore
+	} else {
+		provStore = origProvStore
 	}
 
 	var dht routing.Routing
@@ -104,7 +110,7 @@ func New(ctx context.Context, fh *firehose.Firehose, conf config.ServerConfig) (
 			kaddht.BucketSize(20),
 			kaddht.Mode(mode),
 			kaddht.Datastore(ds),
-			kaddht.ProviderStore(wrapProvStore),
+			kaddht.ProviderStore(provStore),
 		))
 	} else {
 		log.Infoln("Using standard DHT client")

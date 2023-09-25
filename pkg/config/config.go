@@ -128,6 +128,8 @@ type ServerConfig struct {
 	OptProv        bool
 	FirehoseStream string
 	FirehoseRegion string
+	FirehoseRPCs   bool
+	FirehoseConns  bool
 	StartupDelay   time.Duration
 	IndexerHost    string
 }
@@ -143,6 +145,8 @@ var Server = ServerConfig{
 	FirehoseRegion: "us-east-1",
 	StartupDelay:   3 * time.Minute,
 	IndexerHost:    "",
+	FirehoseConns:  true,
+	FirehoseRPCs:   false,
 }
 
 type Routing string

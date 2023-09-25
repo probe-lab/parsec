@@ -96,6 +96,20 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.FirehoseStream,
 			Destination: &config.Server.FirehoseStream,
 		},
+		&cli.BoolFlag{
+			Name:        "firehose-rpcs",
+			EnvVars:     []string{"PARSEC_SERVER_FIREHOSE_RPCS"},
+			DefaultText: strconv.FormatBool(config.Server.FirehoseRPCs),
+			Value:       config.Server.FirehoseRPCs,
+			Destination: &config.Server.FirehoseRPCs,
+		},
+		&cli.BoolFlag{
+			Name:        "firehose-conns",
+			EnvVars:     []string{"PARSEC_SERVER_FIREHOSE_CONNS"},
+			DefaultText: strconv.FormatBool(config.Server.FirehoseConns),
+			Value:       config.Server.FirehoseConns,
+			Destination: &config.Server.FirehoseConns,
+		},
 		&cli.DurationFlag{
 			Name:        "startup-delay",
 			EnvVars:     []string{"PARSEC_SERVER_STARTUP_DELAY"},

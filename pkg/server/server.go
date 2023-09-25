@@ -92,7 +92,7 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		fh:     fh,
 	}
 
-	if fh != nil {
+	if conf.FirehoseConns && fh != nil {
 		parsecHost.Network().Notify(s)
 	}
 

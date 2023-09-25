@@ -85,7 +85,7 @@ func NewProviderStore(ctx context.Context, pstore providers.ProviderStore, h hos
 		store:     pstore,
 		batchSize: 1000,
 		batchTime: 30 * time.Second,
-		batch:     make([]*AddProviderRecord, 0, 1000),
+		batch:     []*AddProviderRecord{},
 		insert:    make(chan *AddProviderRecord),
 		conf:      conf,
 		host:      h,
@@ -118,6 +118,7 @@ func (p *ProviderStore) loop(ctx context.Context) {
 }
 
 func (p *ProviderStore) flush() {
+	log.Infoln("Flushing RPCs to firehose")
 	putRecords := make([]*firehose.Record, len(p.batch))
 
 	for i, addRec := range p.batch {
@@ -133,10 +134,10 @@ func (p *ProviderStore) flush() {
 		Records:            putRecords,
 	})
 	if err != nil {
-		log.WithError(err).Warnln("Couldn't put connection event")
+		log.WithError(err).Warnln("Couldn't put RPC event")
 	}
 
-	p.batch = make([]*AddProviderRecord, 0, 1000)
+	p.batch = []*AddProviderRecord{}
 }
 
 var codecs = []multicodec.Code{
