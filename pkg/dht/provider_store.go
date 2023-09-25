@@ -138,8 +138,6 @@ func (p *ProviderStore) flush() {
 		putRecords[i] = &firehose.Record{Data: dat}
 	}
 
-	logEntry.Infoln("Example record:", string(putRecords[0].Data))
-
 	_, err := p.fh.PutRecordBatch(&firehose.PutRecordBatchInput{
 		DeliveryStreamName: aws.String(p.conf.FirehoseStream),
 		Records:            putRecords,
