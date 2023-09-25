@@ -146,6 +146,8 @@ func (p *ProviderStore) flush() {
 	})
 	if err != nil {
 		logEntry.WithError(err).Warnln("Couldn't put RPC event")
+	} else {
+		logEntry.Infof("Flushed %d records!\n", len(putRecords))
 	}
 
 	p.batch = []*AddProviderRecord{}
@@ -198,7 +200,6 @@ func (p *ProviderStore) AddProvider(ctx context.Context, key []byte, prov peer.A
 				break
 			}
 		}
-
 		p.insert <- rec
 	}()
 

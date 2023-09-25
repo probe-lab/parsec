@@ -115,11 +115,11 @@ func New(ctx context.Context, fh *firehose.Firehose, conf config.ServerConfig) (
 		))
 	} else {
 		log.Infoln("Using standard DHT client")
-		opts := []kaddht.Option{kaddht.Mode(mode), kaddht.Datastore(ds)}
+		opts := []kaddht.Option{kaddht.Mode(mode), kaddht.Datastore(ds), kaddht.ProviderStore(provStore)}
 		if conf.OptProv {
 			opts = append(opts,
 				kaddht.EnableOptimisticProvide(),
-				kaddht.ProviderStore(provStore))
+			)
 		}
 		dht, err = kaddht.New(ctx, basicHost, opts...)
 	}
