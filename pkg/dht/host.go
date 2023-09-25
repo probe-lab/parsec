@@ -93,6 +93,7 @@ func New(ctx context.Context, fh *firehose.Firehose, conf config.ServerConfig) (
 
 	var provStore providers.ProviderStore
 	if conf.FirehoseRPCs {
+		log.Infoln("Using wrapped provider store")
 		wrapProvStore, err := NewProviderStore(ctx, origProvStore, basicHost, fh, conf)
 		if err != nil {
 			return nil, fmt.Errorf("initializing wrapped provider store: %w", err)
@@ -116,7 +117,9 @@ func New(ctx context.Context, fh *firehose.Firehose, conf config.ServerConfig) (
 		log.Infoln("Using standard DHT client")
 		opts := []kaddht.Option{kaddht.Mode(mode), kaddht.Datastore(ds)}
 		if conf.OptProv {
-			opts = append(opts, kaddht.EnableOptimisticProvide())
+			opts = append(opts,
+				kaddht.EnableOptimisticProvide(),
+				kaddht.ProviderStore(provStore))
 		}
 		dht, err = kaddht.New(ctx, basicHost, opts...)
 	}
