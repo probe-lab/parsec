@@ -178,7 +178,7 @@ func (p *ProviderStore) AddProvider(ctx context.Context, key []byte, prov peer.A
 
 		rec := &AddProviderRecord{
 			RemotePeer:   prov.ID.String(),
-			RemoteMaddrs: prov.Addrs,
+			RemoteMaddrs: p.host.Peerstore().Addrs(prov.ID),
 			Timestamp:    time.Now(),
 			AgentVersion: avStr,
 			Multihash:    mh.String(),
