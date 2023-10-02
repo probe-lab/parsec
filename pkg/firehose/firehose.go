@@ -60,7 +60,7 @@ func NewClient(ctx context.Context, conf *Config) (*Client, error) {
 		fh:     fh,
 		conf:   conf,
 		insert: make(chan *Event),
-		batch:  make([]*Event, 0, conf.BatchSize),
+		batch:  []*Event{},
 	}
 
 	go p.loop(ctx)
@@ -145,7 +145,7 @@ func (c *Client) flush() {
 		logEntry.Infof("Flushed %d records!\n", len(putRecords))
 	}
 
-	c.batch = make([]*Event, c.conf.BatchSize)
+	c.batch = []*Event{}
 }
 
 func (c *Client) Submit(evtType string, remotePeer peer.ID, payload any) error {
