@@ -363,7 +363,7 @@ func (h *Host) handlerWrapper(handler func(context.Context, peer.ID, *pb.Message
 			}
 			h.mapMu.RUnlock()
 
-			if err := h.fhClient.Submit("add_provider", id, rec); err != nil {
+			if err := h.fhClient.Submit("dht_rpc", id, rec); err != nil {
 				log.WithError(err).Warnln("Couldn't submit add_provider event")
 			}
 		}()
