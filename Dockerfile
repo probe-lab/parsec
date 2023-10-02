@@ -1,10 +1,9 @@
-FROM golang:1.19 AS builder
+FROM golang:1.20 AS builder
 
 WORKDIR /build
 
-RUN GOARCH=amd64 GOOS=linux go install github.com/guseggert/clustertest/cmd/agent@latest
-
 COPY go.mod go.sum ./
+COPY ./go-libp2p-kad-dht ./go-libp2p-kad-dht
 RUN go mod download
 
 COPY . ./
@@ -21,6 +20,5 @@ RUN chown -R parsec:parsec /home/parsec
 USER parsec
 
 COPY --from=builder /build/parsec /usr/local/bin/parsec
-COPY --from=builder /go/bin/linux_amd64/agent /home/parsec/nodeagent
 
 CMD parsec schedule
