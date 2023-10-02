@@ -97,6 +97,20 @@ var ServerCommand = &cli.Command{
 			Destination: &config.Server.FirehoseStream,
 		},
 		&cli.DurationFlag{
+			Name:        "firehose-batch-time",
+			EnvVars:     []string{"PARSEC_SERVER_FIREHOSE_BATCH_TIME"},
+			DefaultText: config.Server.FirehoseBatchTime.String(),
+			Value:       config.Server.FirehoseBatchTime,
+			Destination: &config.Server.FirehoseBatchTime,
+		},
+		&cli.IntFlag{
+			Name:        "firehose-batch-size",
+			EnvVars:     []string{"PARSEC_SERVER_FIREHOSE_BATCH_SIZE"},
+			DefaultText: strconv.Itoa(config.Server.FirehoseBatchSize),
+			Value:       config.Server.FirehoseBatchSize,
+			Destination: &config.Server.FirehoseBatchSize,
+		},
+		&cli.DurationFlag{
 			Name:        "startup-delay",
 			EnvVars:     []string{"PARSEC_SERVER_STARTUP_DELAY"},
 			DefaultText: config.Server.StartupDelay.String(),
@@ -109,6 +123,13 @@ var ServerCommand = &cli.Command{
 			DefaultText: config.Server.IndexerHost,
 			Value:       config.Server.IndexerHost,
 			Destination: &config.Server.IndexerHost,
+		},
+		&cli.StringFlag{
+			Name:        "badbits",
+			EnvVars:     []string{"PARSEC_SERVER_BADBITS"},
+			DefaultText: config.Server.Badbits,
+			Value:       config.Server.Badbits,
+			Destination: &config.Server.Badbits,
 		},
 	},
 }

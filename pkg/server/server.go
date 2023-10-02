@@ -6,17 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/firehose"
+	"github.com/libp2p/go-libp2p/core/network"
+
 	"github.com/julienschmidt/httprouter"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p/core/network"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/dennis-tra/parsec/pkg/config"
 	"github.com/dennis-tra/parsec/pkg/db"
 	"github.com/dennis-tra/parsec/pkg/dht"
+	"github.com/dennis-tra/parsec/pkg/firehose"
 	"github.com/dennis-tra/parsec/pkg/models"
 	"github.com/dennis-tra/parsec/pkg/util"
 )
@@ -32,16 +31,15 @@ import (
 const headerSchedulerID = "x-scheduler-id"
 
 type Server struct {
-	server *http.Server
-	done   chan struct{}
-	conf   config.ServerConfig
-	cancel context.CancelFunc
-	addr   string
-	host   *dht.Host
-	dbc    db.Client
-	dbNode *models.Node
-	stream string
-	fh     *firehose.Firehose
+	server   *http.Server
+	done     chan struct{}
+	conf     config.ServerConfig
+	cancel   context.CancelFunc
+	addr     string
+	host     *dht.Host
+	dbc      db.Client
+	dbNode   *models.Node
+	fhClient *firehose.Client
 }
 
 var _ network.Notifiee = (*Server)(nil)
@@ -69,41 +67,29 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		return nil, fmt.Errorf("insert node: %w", err)
 	}
 
-	s := &Server{
-		cancel: cancel,
-		dbc:    dbc,
-		conf:   conf,
-		addr:   fmt.Sprintf("%s:%d", conf.ServerHost, conf.ServerPort),
-		host:   parsecHost,
-		dbNode: dbNode,
-		stream: conf.FirehoseStream,
-		done:   make(chan struct{}),
+	fhConf := &firehose.Config{
+		Region:    conf.FirehoseRegion,
+		Stream:    conf.FirehoseStream,
+		BatchSize: conf.FirehoseBatchSize,
+		BatchTime: conf.FirehoseBatchTime,
+		Badbits:   conf.Badbits,
 	}
 
-	if conf.FirehoseStream != "" {
+	fhClient, err := firehose.NewClient(ctx, parsecHost, fhConf)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("new firehose client: %w", err)
+	}
 
-		log.Infoln("Initializing firehose stream access")
-		awsSession, err := session.NewSession(&aws.Config{
-			Region: aws.String(conf.FirehoseRegion),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("new aws session: %w", err)
-		}
-		s.fh = firehose.New(awsSession)
-
-		streamName := aws.String(conf.FirehoseStream)
-
-		log.Infoln("Checking firehose stream permissions")
-		_, err = s.fh.DescribeDeliveryStream(&firehose.DescribeDeliveryStreamInput{
-			DeliveryStreamName: streamName,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("describing firehose stream: %w", err)
-		}
-
-		parsecHost.Network().Notify(s)
-	} else {
-		log.Infoln("No firehose stream configured.")
+	s := &Server{
+		cancel:   cancel,
+		dbc:      dbc,
+		conf:     conf,
+		addr:     fmt.Sprintf("%s:%d", conf.ServerHost, conf.ServerPort),
+		host:     parsecHost,
+		dbNode:   dbNode,
+		fhClient: fhClient,
+		done:     make(chan struct{}),
 	}
 
 	return s, nil
@@ -116,8 +102,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 			log.WithError(err).WithField("nodeID", s.dbNode.ID).Warnln("Couldn't update offline since field of node")
 		}
 	}()
-
-	s.host.Network().StopNotify(s)
 
 	errg := errgroup.Group{}
 

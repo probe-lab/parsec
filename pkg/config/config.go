@@ -117,19 +117,22 @@ func (g GlobalConfig) ServerProcess() (*ServerProcess, error) {
 }
 
 type ServerConfig struct {
-	ServerHost     string
-	ServerPort     int
-	PeerHost       string
-	PeerPort       int
-	FullRT         bool
-	DHTServer      bool
-	Fleet          string
-	LevelDB        string
-	OptProv        bool
-	FirehoseStream string
-	FirehoseRegion string
-	StartupDelay   time.Duration
-	IndexerHost    string
+	ServerHost        string
+	ServerPort        int
+	PeerHost          string
+	PeerPort          int
+	FullRT            bool
+	DHTServer         bool
+	Fleet             string
+	LevelDB           string
+	OptProv           bool
+	FirehoseStream    string
+	FirehoseRegion    string
+	FirehoseBatchSize int
+	FirehoseBatchTime time.Duration
+	StartupDelay      time.Duration
+	IndexerHost       string
+	Badbits           string
 }
 
 var Server = ServerConfig{
@@ -143,6 +146,7 @@ var Server = ServerConfig{
 	FirehoseRegion: "us-east-1",
 	StartupDelay:   3 * time.Minute,
 	IndexerHost:    "",
+	Badbits:        "",
 }
 
 type Routing string

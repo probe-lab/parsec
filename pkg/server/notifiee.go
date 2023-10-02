@@ -1,38 +1,24 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/firehose"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/dennis-tra/parsec/pkg/config"
 )
 
 type ConnectionEvent struct {
-	RemotePeer   string
 	RemoteMaddr  multiaddr.Multiaddr
 	OpenedAt     time.Time
-	Timestamp    time.Time
 	Direction    string
 	Transient    bool
 	ConnectionID string
-	PartitionKey string
-	AgentVersion string
 	Transport    string
 	Address      net.IP
-	Fleet        string
-	DBNodeID     int
-	LocalPeer    string
-	Region       string
-	Type         string
 }
 
 func (s *Server) Listen(n network.Network, multiaddr multiaddr.Multiaddr) {
@@ -46,21 +32,11 @@ func (s *Server) Connected(n network.Network, conn network.Conn) {
 }
 
 func (s *Server) Disconnected(n network.Network, conn network.Conn) {
-	// Don't track disconnect events for now
-	// go s.trackConnectionEvent(conn, "disconnect")
+	go s.trackConnectionEvent(conn, "disconnect")
 }
 
 func (s *Server) trackConnectionEvent(conn network.Conn, evtType string) {
-	now := time.Now()
 	s.host.BasicHost.IDService().IdentifyConn(conn)
-
-	avStr := ""
-	agentVersion, err := s.host.Peerstore().Get(conn.RemotePeer(), "AgentVersion")
-	if err == nil {
-		if str, ok := agentVersion.(string); ok {
-			avStr = str
-		}
-	}
 
 	ipnet, err := manet.ToIP(conn.RemoteMultiaddr())
 	if err != nil || len(ipnet) == 0 {
@@ -74,36 +50,17 @@ func (s *Server) trackConnectionEvent(conn network.Conn, evtType string) {
 
 	stat := conn.Stat()
 	ce := ConnectionEvent{
-		Fleet:        s.conf.Fleet,
-		DBNodeID:     s.dbNode.ID,
-		Region:       config.Global.AWSRegion,
-		LocalPeer:    conn.LocalPeer().String(),
 		ConnectionID: conn.ID(),
-		RemotePeer:   conn.RemotePeer().String(),
 		RemoteMaddr:  conn.RemoteMultiaddr(),
 		OpenedAt:     stat.Opened,
 		Direction:    stat.Direction.String(),
 		Transient:    stat.Transient,
-		AgentVersion: avStr,
 		Transport:    trpt,
 		Address:      ipnet,
-		Timestamp:    now,
-		PartitionKey: fmt.Sprintf("%s-%s", config.Global.AWSRegion, s.conf.Fleet),
-		Type:         evtType,
 	}
 
-	data, err := json.Marshal(ce)
-	if err != nil {
-		log.WithError(err).Warnln("Couldn't marshal connection event")
-		return
-	}
-
-	_, err = s.fh.PutRecord(&firehose.PutRecordInput{
-		Record:             &firehose.Record{Data: data},
-		DeliveryStreamName: aws.String(s.stream),
-	})
-	if err != nil {
-		log.WithError(err).Warnln("Couldn't put connection event")
+	if err := s.fhClient.Submit(evtType, conn.RemotePeer(), ce); err != nil {
+		log.WithError(err).Warnf("Couldn't submit %s event", evtType)
 	}
 }
 
