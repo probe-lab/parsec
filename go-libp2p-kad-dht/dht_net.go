@@ -115,7 +115,8 @@ func (dht *IpfsDHT) handleNewMessage(s network.Stream) bool {
 				zap.Int32("type", int32(req.GetType())),
 				zap.Binary("key", req.GetKey()))
 		}
-		resp, err := handler(ctx, mPeer, &req)
+
+		resp, err := dht.dhtHandlerWrapper(handler, ctx, mPeer, &req)
 		if err != nil {
 			stats.Record(ctx, metrics.ReceivedMessageErrors.M(1))
 			if c := baseLogger.Check(zap.DebugLevel, "error handling message"); c != nil {

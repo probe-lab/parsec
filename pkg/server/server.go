@@ -47,11 +47,27 @@ var _ network.Notifiee = (*Server)(nil)
 func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	parsecHost, err := dht.New(ctx, conf)
+	fhConf := &firehose.Config{
+		Region:    conf.FirehoseRegion,
+		Stream:    conf.FirehoseStream,
+		BatchSize: conf.FirehoseBatchSize,
+		BatchTime: conf.FirehoseBatchTime,
+		Badbits:   conf.Badbits,
+	}
+
+	fhClient, err := firehose.NewClient(ctx, fhConf)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("new firehose client: %w", err)
+	}
+
+	parsecHost, err := dht.New(ctx, fhClient, conf)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("new host: %w", err)
 	}
+
+	fhClient.SetHost(parsecHost)
 
 	log.Infoln("Bootstrapping DHT...")
 	for _, bp := range kaddht.GetDefaultBootstrapPeerAddrInfos() {
@@ -65,20 +81,6 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("insert node: %w", err)
-	}
-
-	fhConf := &firehose.Config{
-		Region:    conf.FirehoseRegion,
-		Stream:    conf.FirehoseStream,
-		BatchSize: conf.FirehoseBatchSize,
-		BatchTime: conf.FirehoseBatchTime,
-		Badbits:   conf.Badbits,
-	}
-
-	fhClient, err := firehose.NewClient(ctx, parsecHost, fhConf)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("new firehose client: %w", err)
 	}
 
 	s := &Server{

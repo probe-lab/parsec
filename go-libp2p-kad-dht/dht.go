@@ -41,8 +41,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const tracer = tracing.Tracer("go-libp2p-kad-dht")
-const dhtName = "IpfsDHT"
+const (
+	tracer  = tracing.Tracer("go-libp2p-kad-dht")
+	dhtName = "IpfsDHT"
+)
 
 var (
 	logger     = logging.Logger("dht")
@@ -164,6 +166,8 @@ type IpfsDHT struct {
 	// addrFilter is used to filter the addresses we put into the peer store.
 	// Mostly used to filter out localhost and local addresses.
 	addrFilter func([]ma.Multiaddr) []ma.Multiaddr
+
+	dhtHandlerWrapper func(DhtHandler, context.Context, peer.ID, *pb.Message) (*pb.Message, error)
 }
 
 // Assert that IPFS assumptions about interfaces aren't broken. These aren't a
@@ -204,6 +208,13 @@ func New(ctx context.Context, h host.Host, options ...Option) (*IpfsDHT, error) 
 	dht.enableProviders = cfg.EnableProviders
 	dht.enableValues = cfg.EnableValues
 	dht.disableFixLowPeers = cfg.DisableFixLowPeers
+	if cfg.DhtHandlerWrapper == nil {
+		dht.dhtHandlerWrapper = func(handler DhtHandler, ctx context.Context, id peer.ID, message *pb.Message) (*pb.Message, error) {
+			return handler(ctx, id, message)
+		}
+	} else {
+		dht.dhtHandlerWrapper = cfg.DhtHandlerWrapper
+	}
 
 	dht.Validator = cfg.Validator
 	dht.msgSender = net.NewMessageSenderImpl(h, dht.protocols)
@@ -416,7 +427,6 @@ func makeRoutingTable(dht *IpfsDHT, cfg dhtcfg.Config, maxLastSuccessfulOutbound
 		df, err := peerdiversity.NewFilter(dht.rtPeerDiversityFilter, "rt/diversity", func(p peer.ID) int {
 			return kb.CommonPrefixLen(dht.selfKey, kb.ConvertPeerID(p))
 		})
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct peer diversity filter: %w", err)
 		}

@@ -1,9 +1,12 @@
 package dht
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
+
+	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 
 	dhtcfg "github.com/libp2p/go-libp2p-kad-dht/internal/config"
 	"github.com/libp2p/go-libp2p-kad-dht/providers"
@@ -353,6 +356,13 @@ func OptimisticProvideJobsPoolSize(size int) Option {
 func AddressFilter(f func([]ma.Multiaddr) []ma.Multiaddr) Option {
 	return func(c *dhtcfg.Config) error {
 		c.AddressFilter = f
+		return nil
+	}
+}
+
+func DhtHandlerWrapper(f func(DhtHandler, context.Context, peer.ID, *pb.Message) (*pb.Message, error)) Option {
+	return func(c *dhtcfg.Config) error {
+		c.DhtHandlerWrapper = f
 		return nil
 	}
 }

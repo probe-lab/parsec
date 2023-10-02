@@ -9,13 +9,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/firehose"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
-	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/dht"
 )
 
 type Config struct {
@@ -43,14 +42,14 @@ type Event struct {
 }
 
 type Client struct {
-	host   *basichost.BasicHost
+	host   host.Host
 	fh     *firehose.Firehose
 	conf   *Config
 	insert chan *Event
 	batch  []*Event
 }
 
-func NewClient(ctx context.Context, h *dht.Host, conf *Config) (*Client, error) {
+func NewClient(ctx context.Context, conf *Config) (*Client, error) {
 	log.Infoln("Initializing firehose stream")
 	fh, err := initStream(conf.Region, conf.Stream)
 	if err != nil {
@@ -58,7 +57,6 @@ func NewClient(ctx context.Context, h *dht.Host, conf *Config) (*Client, error) 
 	}
 
 	p := &Client{
-		host:   h.BasicHost,
 		fh:     fh,
 		conf:   conf,
 		insert: make(chan *Event),
@@ -68,6 +66,10 @@ func NewClient(ctx context.Context, h *dht.Host, conf *Config) (*Client, error) 
 	go p.loop(ctx)
 
 	return p, nil
+}
+
+func (c *Client) SetHost(h host.Host) {
+	c.host = h
 }
 
 func initStream(region, stream string) (*firehose.Firehose, error) {

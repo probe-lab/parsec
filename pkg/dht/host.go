@@ -1,40 +1,53 @@
 package dht
 
 import (
+	"bufio"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/ipfs/go-cid"
 	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
 	"github.com/libp2p/go-libp2p-kad-dht/metrics"
+	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
 	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	"github.com/multiformats/go-multicodec"
+	"github.com/multiformats/go-multihash"
 	mh "github.com/multiformats/go-multihash"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
 
 	"github.com/dennis-tra/parsec/pkg/config"
+	"github.com/dennis-tra/parsec/pkg/firehose"
 )
 
 const ipfsProtocolPrefix = "/ipfs"
 
 type Host struct {
 	host.Host
+	fhClient      *firehose.Client
 	DHT           routing.Routing
 	BasicHost     *basichost.BasicHost
 	indexer       *Indexer
 	multihashesLk sync.RWMutex
 	multihashes   map[string]multiHashEntry
+	denyMap       map[string]struct{}
 }
 
 type multiHashEntry struct {
@@ -42,7 +55,7 @@ type multiHashEntry struct {
 	mhs []mh.Multihash
 }
 
-func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
+func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfig) (*Host, error) {
 	// Don't listen on quic-v1 since it's not supported by IPNI at the moment
 	addrs := []string{
 		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", conf.PeerPort),
@@ -79,9 +92,21 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 		return nil, fmt.Errorf("new libp2p host: %w", err)
 	}
 
+	denyMap, err := loadBadbits(conf.Badbits)
+	if err != nil {
+		return nil, fmt.Errorf("load bad bits: %w", err)
+	}
+
 	mode := kaddht.ModeClient
 	if conf.DHTServer {
 		mode = kaddht.ModeServer
+	}
+
+	newHost := &Host{
+		BasicHost:   basicHost.(*basichost.BasicHost),
+		fhClient:    fhClient,
+		multihashes: map[string]multiHashEntry{},
+		denyMap:     denyMap,
 	}
 
 	var dht routing.Routing
@@ -92,10 +117,15 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 			kaddht.BucketSize(20),
 			kaddht.Mode(mode),
 			kaddht.Datastore(ds),
+			kaddht.DhtHandlerWrapper(newHost.handlerWrapper),
 		))
 	} else {
 		log.Infoln("Using standard DHT client")
-		opts := []kaddht.Option{kaddht.Mode(mode), kaddht.Datastore(ds)}
+		opts := []kaddht.Option{
+			kaddht.Mode(mode),
+			kaddht.Datastore(ds),
+			kaddht.DhtHandlerWrapper(newHost.handlerWrapper),
+		}
 		if conf.OptProv {
 			opts = append(opts, kaddht.EnableOptimisticProvide())
 		}
@@ -105,12 +135,8 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 		return nil, fmt.Errorf("new router: %w", err)
 	}
 
-	newHost := &Host{
-		Host:        routedhost.Wrap(basicHost, dht),
-		BasicHost:   basicHost.(*basichost.BasicHost),
-		DHT:         dht,
-		multihashes: map[string]multiHashEntry{},
-	}
+	newHost.Host = routedhost.Wrap(basicHost, dht)
+	newHost.DHT = dht
 
 	if config.Server.IndexerHost != "" {
 		newHost.indexer, err = newHost.initIndexer(ctx, ds, config.Server.IndexerHost)
@@ -132,6 +158,89 @@ func New(ctx context.Context, conf config.ServerConfig) (*Host, error) {
 	}
 
 	return newHost, nil
+}
+
+func loadBadbits(filename string) (map[string]struct{}, error) {
+	log.Infoln("Parsing Badbits file")
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("open bad bits file: %w", err)
+	}
+
+	denyMap := map[string]struct{}{}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "//") {
+			continue
+		}
+
+		denyMap[line[2:]] = struct{}{}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scanner error: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return nil, fmt.Errorf("closing bad bits file: %w", err)
+	}
+
+	return denyMap, nil
+}
+
+type RPCRequest struct {
+	MessageType string
+	Multihash   string
+	Preimage    string
+	Source      string
+}
+
+var codecs = []multicodec.Code{
+	multicodec.Raw,
+	multicodec.DagPb,
+	multicodec.DagCbor,
+	multicodec.DagJose,
+}
+
+func (h *Host) handlerWrapper(handler kaddht.DhtHandler, ctx context.Context, id peer.ID, req *pb.Message) (*pb.Message, error) {
+	switch req.GetType() {
+	case pb.Message_ADD_PROVIDER, pb.Message_GET_PROVIDERS:
+		go func() {
+			_, mh, err := multihash.MHFromBytes(req.GetKey())
+			if err != nil {
+				log.WithError(err).Warnln("failed to parse multihash from key")
+				return
+			}
+
+			rec := &RPCRequest{
+				MessageType: req.GetType().String(),
+				Multihash:   mh.String(),
+				Source:      "badbits",
+			}
+
+			for _, codec := range codecs {
+				v1 := cid.NewCidV1(uint64(codec), mh)
+				preimage := v1.String() + "/"
+				hsh := sha256.Sum256([]byte(preimage))
+				matchStr := hex.EncodeToString(hsh[:])
+
+				if _, found := h.denyMap[matchStr]; found {
+					rec.Preimage = preimage
+					log.WithField("preimage", preimage).Infoln("Preimage found!", id)
+					break
+				}
+			}
+
+			if err := h.fhClient.Submit("add_provider", id, rec); err != nil {
+				log.WithError(err).Warnln("Couldn't submit add_provider event")
+			}
+		}()
+	default:
+	}
+
+	return handler(ctx, id, req)
 }
 
 func (h *Host) subscribeForEvents() error {
