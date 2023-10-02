@@ -137,18 +137,20 @@ type ServerConfig struct {
 }
 
 var Server = ServerConfig{
-	ServerHost:     "localhost",
-	ServerPort:     7070,
-	PeerPort:       4001,
-	Fleet:          "",
-	FullRT:         false,
-	DHTServer:      false,
-	LevelDB:        "./leveldb",
-	FirehoseRegion: "us-east-1",
-	StartupDelay:   3 * time.Minute,
-	IndexerHost:    "",
-	Badbits:        "",
-	DeniedCIDs:     "",
+	ServerHost:        "localhost",
+	ServerPort:        7070,
+	PeerPort:          4001,
+	Fleet:             "",
+	FullRT:            false,
+	DHTServer:         false,
+	LevelDB:           "./leveldb",
+	FirehoseRegion:    "us-east-1",
+	StartupDelay:      3 * time.Minute,
+	IndexerHost:       "",
+	Badbits:           "badbits.deny",
+	DeniedCIDs:        "cids.deny",
+	FirehoseBatchTime: 30 * time.Second,
+	FirehoseBatchSize: 500,
 }
 
 type Routing string
