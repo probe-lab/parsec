@@ -94,6 +94,8 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		done:     make(chan struct{}),
 	}
 
+	parsecHost.Network().Notify(s)
+
 	return s, nil
 }
 
@@ -104,6 +106,8 @@ func (s *Server) Shutdown(ctx context.Context) error {
 			log.WithError(err).WithField("nodeID", s.dbNode.ID).Warnln("Couldn't update offline since field of node")
 		}
 	}()
+
+	s.host.Network().StopNotify(s)
 
 	errg := errgroup.Group{}
 
