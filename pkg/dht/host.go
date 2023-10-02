@@ -176,7 +176,7 @@ func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfi
 	go newHost.measureNetworkSize(ctx)
 	go newHost.measureDiskUsage(ctx, ds)
 	go newHost.gcMultihashEntries(ctx)
-	go newHost.reloadMaps(ctx)
+	// go newHost.reloadMaps(ctx)
 
 	log.WithField("localID", newHost.ID()).Info("Initialized new libp2p host")
 
@@ -220,6 +220,8 @@ func loadDeniedCIDs(filename string) (map[string]string, error) {
 		denyMap[CID] = source
 	}
 
+	log.WithField("size", len(denyMap)).Infoln("Loaded denied CIDs file")
+
 	return denyMap, nil
 }
 
@@ -254,6 +256,8 @@ func loadBadbits(filename string) (map[string]struct{}, error) {
 	if err := file.Close(); err != nil {
 		return nil, fmt.Errorf("closing bad bits file: %w", err)
 	}
+
+	log.WithField("size", len(denyMap)).Infoln("Loaded badbits file")
 
 	return denyMap, nil
 }
