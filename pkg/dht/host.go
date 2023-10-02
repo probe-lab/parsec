@@ -204,12 +204,6 @@ func loadDeniedCIDs(filename string) (map[string]string, error) {
 	// Create a new CSV reader reading from the opened file
 	reader := csv.NewReader(file)
 
-	// Assume we have a header line, read it
-	_, err = reader.Read()
-	if err != nil {
-		return nil, err
-	}
-
 	// Now, process the rest of the CSV records
 	records, err := reader.ReadAll()
 	if err != nil {
