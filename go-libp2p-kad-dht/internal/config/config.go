@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 
 	"github.com/ipfs/boxo/ipns"
@@ -72,7 +71,7 @@ type Config struct {
 
 	EnableOptimisticProvide       bool
 	OptimisticProvideJobsPoolSize int
-	DhtHandlerWrapper             func(kaddht.DhtHandler, context.Context, peer.ID, *pb.Message) (*pb.Message, error)
+	DhtHandlerWrapper             func(func(context.Context, peer.ID, *pb.Message) (*pb.Message, error), context.Context, peer.ID, *pb.Message) (*pb.Message, error)
 }
 
 func EmptyQueryFilter(_ interface{}, ai peer.AddrInfo) bool { return true }

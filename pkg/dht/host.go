@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -41,13 +42,19 @@ const ipfsProtocolPrefix = "/ipfs"
 
 type Host struct {
 	host.Host
+	conf          config.ServerConfig
 	fhClient      *firehose.Client
 	DHT           routing.Routing
 	BasicHost     *basichost.BasicHost
 	indexer       *Indexer
 	multihashesLk sync.RWMutex
 	multihashes   map[string]multiHashEntry
-	denyMap       map[string]struct{}
+
+	mapMu           sync.RWMutex
+	badbitsMap      map[string]struct{}
+	deniedCIDsMap   map[string]string
+	badbitsStats    os.FileInfo
+	deniedCIDsStats os.FileInfo
 }
 
 type multiHashEntry struct {
@@ -92,9 +99,24 @@ func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfi
 		return nil, fmt.Errorf("new libp2p host: %w", err)
 	}
 
-	denyMap, err := loadBadbits(conf.Badbits)
+	badbitsStats, err := os.Stat(conf.Badbits)
 	if err != nil {
-		return nil, fmt.Errorf("load bad bits: %w", err)
+		return nil, fmt.Errorf("stats from badbits file %s: %w", conf.Badbits, err)
+	}
+
+	badbitsMap, err := loadBadbits(conf.Badbits)
+	if err != nil {
+		return nil, fmt.Errorf("load badbits: %w", err)
+	}
+
+	deniedCIDsStats, err := os.Stat(conf.DeniedCIDs)
+	if err != nil {
+		return nil, fmt.Errorf("stats from denied CIDs file %s: %w", conf.Badbits, err)
+	}
+
+	deniedCIDsMap, err := loadDeniedCIDs(conf.DeniedCIDs)
+	if err != nil {
+		return nil, fmt.Errorf("load denied CIDs: %w", err)
 	}
 
 	mode := kaddht.ModeClient
@@ -103,10 +125,14 @@ func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfi
 	}
 
 	newHost := &Host{
-		BasicHost:   basicHost.(*basichost.BasicHost),
-		fhClient:    fhClient,
-		multihashes: map[string]multiHashEntry{},
-		denyMap:     denyMap,
+		conf:            conf,
+		BasicHost:       basicHost.(*basichost.BasicHost),
+		fhClient:        fhClient,
+		multihashes:     map[string]multiHashEntry{},
+		badbitsStats:    badbitsStats,
+		deniedCIDsStats: deniedCIDsStats,
+		badbitsMap:      badbitsMap,
+		deniedCIDsMap:   deniedCIDsMap,
 	}
 
 	var dht routing.Routing
@@ -150,6 +176,7 @@ func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfi
 	go newHost.measureNetworkSize(ctx)
 	go newHost.measureDiskUsage(ctx, ds)
 	go newHost.gcMultihashEntries(ctx)
+	go newHost.reloadMaps(ctx)
 
 	log.WithField("localID", newHost.ID()).Info("Initialized new libp2p host")
 
@@ -160,7 +187,54 @@ func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfi
 	return newHost, nil
 }
 
+func loadDeniedCIDs(filename string) (map[string]string, error) {
+	if filename == "" {
+		log.Infoln("No denied CIDs file configured")
+		return map[string]string{}, nil
+	}
+
+	log.Infoln("Parsing Denied CIDs file")
+	// Open the provided filename
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	// Create a new CSV reader reading from the opened file
+	reader := csv.NewReader(file)
+
+	// Assume we have a header line, read it
+	_, err = reader.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	// Now, process the rest of the CSV records
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	denyMap := map[string]string{}
+	for _, record := range records {
+		if len(record) != 2 {
+			continue // Not enough fields in the record
+		}
+		CID := record[0]
+		source := record[1]
+		denyMap[CID] = source
+	}
+
+	return denyMap, nil
+}
+
 func loadBadbits(filename string) (map[string]struct{}, error) {
+	if filename == "" {
+		log.Infoln("No Badbits file configured")
+		return map[string]struct{}{}, nil
+	}
+
 	log.Infoln("Parsing Badbits file")
 	file, err := os.Open(filename)
 	if err != nil {
@@ -190,10 +264,58 @@ func loadBadbits(filename string) (map[string]struct{}, error) {
 	return denyMap, nil
 }
 
+func (h *Host) reloadMaps(ctx context.Context) {
+	t := time.NewTicker(time.Minute)
+	for {
+		select {
+		case <-ctx.Done():
+		case <-t.C:
+
+			log.Infoln("Reloading Maps")
+			badbitsStats, err := os.Stat(h.conf.Badbits)
+			if err != nil {
+				log.WithError(err).Warnln("Couldn't get badbits file stats")
+			} else if badbitsStats.ModTime().After(h.badbitsStats.ModTime()) {
+				log.Infoln("Reloading badbits map because it has changed")
+				badbitsMap, err := loadBadbits(h.conf.Badbits)
+				if err != nil {
+					log.WithError(err).Warnln("Couldn't reload badbits")
+				} else {
+					h.mapMu.Lock()
+					h.badbitsStats = badbitsStats
+					h.badbitsMap = badbitsMap
+					h.mapMu.Unlock()
+				}
+			} else {
+				log.Infoln("Not reloading badbits map because it's unchanged")
+			}
+
+			deniedCIDsStats, err := os.Stat(h.conf.DeniedCIDs)
+			if err != nil {
+				log.WithError(err).Warnln("Couldn't get denied CIDs file stats")
+			} else if deniedCIDsStats.ModTime().After(h.deniedCIDsStats.ModTime()) {
+				log.Infoln("Reloading badbits map because it has changed")
+				deniedCIDsMap, err := loadDeniedCIDs(h.conf.DeniedCIDs)
+				if err != nil {
+					log.WithError(err).Warnln("Couldn't reload denied CIDs")
+				} else {
+					h.mapMu.Lock()
+					h.deniedCIDsStats = deniedCIDsStats
+					h.deniedCIDsMap = deniedCIDsMap
+					h.mapMu.Unlock()
+				}
+			} else {
+				log.Infoln("Not reloading badbits map because it's unchanged")
+			}
+
+		}
+	}
+}
+
 type RPCRequest struct {
 	MessageType string
 	Multihash   string
-	Preimage    string
+	Match       string
 	Source      string
 }
 
@@ -204,7 +326,7 @@ var codecs = []multicodec.Code{
 	multicodec.DagJose,
 }
 
-func (h *Host) handlerWrapper(handler kaddht.DhtHandler, ctx context.Context, id peer.ID, req *pb.Message) (*pb.Message, error) {
+func (h *Host) handlerWrapper(handler func(context.Context, peer.ID, *pb.Message) (*pb.Message, error), ctx context.Context, id peer.ID, req *pb.Message) (*pb.Message, error) {
 	switch req.GetType() {
 	case pb.Message_ADD_PROVIDER, pb.Message_GET_PROVIDERS:
 		go func() {
@@ -217,21 +339,31 @@ func (h *Host) handlerWrapper(handler kaddht.DhtHandler, ctx context.Context, id
 			rec := &RPCRequest{
 				MessageType: req.GetType().String(),
 				Multihash:   mh.String(),
-				Source:      "badbits",
 			}
 
+			h.mapMu.RLock()
 			for _, codec := range codecs {
 				v1 := cid.NewCidV1(uint64(codec), mh)
+
+				if source, found := h.deniedCIDsMap[v1.String()]; found {
+					rec.Match = v1.String()
+					rec.Source = source
+					log.WithField("source", source).Infof("Found CID in %s!", source)
+					break
+				}
+
 				preimage := v1.String() + "/"
 				hsh := sha256.Sum256([]byte(preimage))
 				matchStr := hex.EncodeToString(hsh[:])
 
-				if _, found := h.denyMap[matchStr]; found {
-					rec.Preimage = preimage
+				if _, found := h.badbitsMap[matchStr]; found {
+					rec.Match = preimage
+					rec.Source = "badbits"
 					log.WithField("preimage", preimage).Infoln("Preimage found!", id)
 					break
 				}
 			}
+			h.mapMu.RUnlock()
 
 			if err := h.fhClient.Submit("add_provider", id, rec); err != nil {
 				log.WithError(err).Warnln("Couldn't submit add_provider event")

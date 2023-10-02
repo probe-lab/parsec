@@ -131,6 +131,13 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.Badbits,
 			Destination: &config.Server.Badbits,
 		},
+		&cli.StringFlag{
+			Name:        "denied-cids",
+			EnvVars:     []string{"PARSEC_SERVER_DENIED_CIDS"},
+			DefaultText: config.Server.Badbits,
+			Value:       config.Server.Badbits,
+			Destination: &config.Server.Badbits,
+		},
 	},
 }
 

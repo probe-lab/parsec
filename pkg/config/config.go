@@ -133,6 +133,7 @@ type ServerConfig struct {
 	StartupDelay      time.Duration
 	IndexerHost       string
 	Badbits           string
+	DeniedCIDs        string
 }
 
 var Server = ServerConfig{
@@ -147,6 +148,7 @@ var Server = ServerConfig{
 	StartupDelay:   3 * time.Minute,
 	IndexerHost:    "",
 	Badbits:        "",
+	DeniedCIDs:     "",
 }
 
 type Routing string

@@ -360,7 +360,7 @@ func AddressFilter(f func([]ma.Multiaddr) []ma.Multiaddr) Option {
 	}
 }
 
-func DhtHandlerWrapper(f func(DhtHandler, context.Context, peer.ID, *pb.Message) (*pb.Message, error)) Option {
+func DhtHandlerWrapper(f func(func(context.Context, peer.ID, *pb.Message) (*pb.Message, error), context.Context, peer.ID, *pb.Message) (*pb.Message, error)) Option {
 	return func(c *dhtcfg.Config) error {
 		c.DhtHandlerWrapper = f
 		return nil

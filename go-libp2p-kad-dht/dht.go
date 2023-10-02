@@ -167,7 +167,7 @@ type IpfsDHT struct {
 	// Mostly used to filter out localhost and local addresses.
 	addrFilter func([]ma.Multiaddr) []ma.Multiaddr
 
-	dhtHandlerWrapper func(DhtHandler, context.Context, peer.ID, *pb.Message) (*pb.Message, error)
+	dhtHandlerWrapper func(func(context.Context, peer.ID, *pb.Message) (*pb.Message, error), context.Context, peer.ID, *pb.Message) (*pb.Message, error)
 }
 
 // Assert that IPFS assumptions about interfaces aren't broken. These aren't a
@@ -209,7 +209,7 @@ func New(ctx context.Context, h host.Host, options ...Option) (*IpfsDHT, error) 
 	dht.enableValues = cfg.EnableValues
 	dht.disableFixLowPeers = cfg.DisableFixLowPeers
 	if cfg.DhtHandlerWrapper == nil {
-		dht.dhtHandlerWrapper = func(handler DhtHandler, ctx context.Context, id peer.ID, message *pb.Message) (*pb.Message, error) {
+		dht.dhtHandlerWrapper = func(handler func(context.Context, peer.ID, *pb.Message) (*pb.Message, error), ctx context.Context, id peer.ID, message *pb.Message) (*pb.Message, error) {
 			return handler(ctx, id, message)
 		}
 	} else {
