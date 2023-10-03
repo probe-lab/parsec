@@ -138,13 +138,17 @@ func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfi
 	var dht routing.Routing
 	if conf.FullRT {
 		log.Infoln("Using full accelerated DHT client")
-		dht, err = fullrt.NewFullRT(basicHost, ipfsProtocolPrefix, fullrt.DHTOption(
+		opts := []kaddht.Option{
 			kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
 			kaddht.BucketSize(20),
 			kaddht.Mode(mode),
 			kaddht.Datastore(ds),
-			kaddht.DhtHandlerWrapper(newHost.handlerWrapper),
-		))
+		}
+		if conf.FirehoseRPCEvents {
+			opts = append(opts, kaddht.DhtHandlerWrapper(newHost.handlerWrapper))
+		}
+
+		dht, err = fullrt.NewFullRT(basicHost, ipfsProtocolPrefix, fullrt.DHTOption(opts...))
 	} else {
 		log.Infoln("Using standard DHT client")
 		opts := []kaddht.Option{
@@ -154,6 +158,9 @@ func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfi
 		}
 		if conf.OptProv {
 			opts = append(opts, kaddht.EnableOptimisticProvide())
+		}
+		if conf.FirehoseRPCEvents {
+			opts = append(opts, kaddht.DhtHandlerWrapper(newHost.handlerWrapper))
 		}
 		dht, err = kaddht.New(ctx, basicHost, opts...)
 	}

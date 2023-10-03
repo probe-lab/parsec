@@ -97,7 +97,9 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		done:     make(chan struct{}),
 	}
 
-	parsecHost.Network().Notify(s)
+	if conf.FirehoseConnectionEvents {
+		parsecHost.Network().Notify(s)
+	}
 
 	return s, nil
 }

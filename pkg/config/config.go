@@ -117,40 +117,44 @@ func (g GlobalConfig) ServerProcess() (*ServerProcess, error) {
 }
 
 type ServerConfig struct {
-	ServerHost        string
-	ServerPort        int
-	PeerHost          string
-	PeerPort          int
-	FullRT            bool
-	DHTServer         bool
-	Fleet             string
-	LevelDB           string
-	OptProv           bool
-	FirehoseStream    string
-	FirehoseRegion    string
-	FirehoseBatchSize int
-	FirehoseBatchTime time.Duration
-	StartupDelay      time.Duration
-	IndexerHost       string
-	Badbits           string
-	DeniedCIDs        string
+	ServerHost               string
+	ServerPort               int
+	PeerHost                 string
+	PeerPort                 int
+	FullRT                   bool
+	DHTServer                bool
+	Fleet                    string
+	LevelDB                  string
+	OptProv                  bool
+	FirehoseStream           string
+	FirehoseRegion           string
+	FirehoseBatchSize        int
+	FirehoseBatchTime        time.Duration
+	StartupDelay             time.Duration
+	IndexerHost              string
+	Badbits                  string
+	DeniedCIDs               string
+	FirehoseConnectionEvents bool
+	FirehoseRPCEvents        bool
 }
 
 var Server = ServerConfig{
-	ServerHost:        "localhost",
-	ServerPort:        7070,
-	PeerPort:          4001,
-	Fleet:             "",
-	FullRT:            false,
-	DHTServer:         false,
-	LevelDB:           "./leveldb",
-	FirehoseRegion:    "us-east-1",
-	StartupDelay:      3 * time.Minute,
-	IndexerHost:       "",
-	Badbits:           "badbits.deny",
-	DeniedCIDs:        "cids.deny",
-	FirehoseBatchTime: 30 * time.Second,
-	FirehoseBatchSize: 500,
+	ServerHost:               "localhost",
+	ServerPort:               7070,
+	PeerPort:                 4001,
+	Fleet:                    "",
+	FullRT:                   false,
+	DHTServer:                false,
+	LevelDB:                  "./leveldb",
+	FirehoseRegion:           "us-east-1",
+	StartupDelay:             3 * time.Minute,
+	IndexerHost:              "",
+	Badbits:                  "badbits.deny",
+	DeniedCIDs:               "cids.deny",
+	FirehoseBatchTime:        30 * time.Second,
+	FirehoseBatchSize:        500,
+	FirehoseConnectionEvents: true,
+	FirehoseRPCEvents:        true,
 }
 
 type Routing string

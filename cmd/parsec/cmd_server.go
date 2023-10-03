@@ -110,6 +110,20 @@ var ServerCommand = &cli.Command{
 			Value:       config.Server.FirehoseBatchSize,
 			Destination: &config.Server.FirehoseBatchSize,
 		},
+		&cli.BoolFlag{
+			Name:        "firehose-connection-events",
+			EnvVars:     []string{"PARSEC_SERVER_FIREHOSE_CONNECTION_EVENTS"},
+			DefaultText: strconv.FormatBool(config.Server.FirehoseConnectionEvents),
+			Value:       config.Server.FirehoseConnectionEvents,
+			Destination: &config.Server.FirehoseConnectionEvents,
+		},
+		&cli.BoolFlag{
+			Name:        "firehose-rpc-events",
+			EnvVars:     []string{"PARSEC_SERVER_FIREHOSE_RPC_EVENTS"},
+			DefaultText: strconv.FormatBool(config.Server.FirehoseRPCEvents),
+			Value:       config.Server.FirehoseRPCEvents,
+			Destination: &config.Server.FirehoseRPCEvents,
+		},
 		&cli.DurationFlag{
 			Name:        "startup-delay",
 			EnvVars:     []string{"PARSEC_SERVER_STARTUP_DELAY"},
