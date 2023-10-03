@@ -48,6 +48,7 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 	ctx, cancel := context.WithCancel(ctx)
 
 	fhConf := &firehose.Config{
+		Fleet:     conf.Fleet,
 		Region:    conf.FirehoseRegion,
 		Stream:    conf.FirehoseStream,
 		BatchSize: conf.FirehoseBatchSize,
@@ -82,6 +83,8 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		cancel()
 		return nil, fmt.Errorf("insert node: %w", err)
 	}
+
+	fhClient.SetDBNodeID(dbNode.ID)
 
 	s := &Server{
 		cancel:   cancel,

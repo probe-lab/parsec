@@ -72,6 +72,10 @@ func (c *Client) SetHost(h host.Host) {
 	c.host = h
 }
 
+func (c *Client) SetDBNodeID(id int) {
+	c.conf.DBNodeID = id
+}
+
 func initStream(region, stream string) (*firehose.Firehose, error) {
 	awsSession, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
