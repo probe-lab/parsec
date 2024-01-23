@@ -17,7 +17,7 @@ test:
 	go test ./...
 
 build:
-	go build -ldflags "-X main.RawVersion=${VERSION} -X main.ShortCommit=${GIT_TAG}" -o dist/parsec github.com/dennis-tra/parsec/cmd/parsec
+	go build -ldflags "-X main.RawVersion=${VERSION} -X main.ShortCommit=${GIT_TAG}" -o dist/parsec github.com/probe-lab/parsec/cmd/parsec
 
 linux-build:
 	GOOS=linux GOARCH=amd64 go build -o dist/parsec cmd/parsec/*

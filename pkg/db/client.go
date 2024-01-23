@@ -25,8 +25,8 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 
-	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/models"
+	"github.com/probe-lab/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/models"
 )
 
 type Client interface {

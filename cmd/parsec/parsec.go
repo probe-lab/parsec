@@ -17,7 +17,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 
-	"github.com/dennis-tra/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/config"
 )
 
 var (

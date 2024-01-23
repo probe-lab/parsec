@@ -12,12 +12,10 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/dht"
-	"github.com/dennis-tra/parsec/pkg/util"
-)
+	"github.com/probe-lab/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/dht"
+	"github.com/probe-lab/parsec/pkg/util"
 
-import (
 	log "github.com/sirupsen/logrus"
 )
 

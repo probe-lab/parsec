@@ -34,8 +34,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
 
-	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/firehose"
+	"github.com/probe-lab/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/firehose"
 )
 
 const ipfsProtocolPrefix = "/ipfs"

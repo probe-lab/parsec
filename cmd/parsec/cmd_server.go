@@ -8,9 +8,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/db"
-	"github.com/dennis-tra/parsec/pkg/server"
+	"github.com/probe-lab/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/db"
+	"github.com/probe-lab/parsec/pkg/server"
 )
 
 // ServerCommand contains the crawl sub-command configuration.

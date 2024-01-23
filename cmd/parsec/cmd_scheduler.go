@@ -10,10 +10,10 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/db"
-	"github.com/dennis-tra/parsec/pkg/server"
-	"github.com/dennis-tra/parsec/pkg/util"
+	"github.com/probe-lab/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/db"
+	"github.com/probe-lab/parsec/pkg/server"
+	"github.com/probe-lab/parsec/pkg/util"
 )
 
 var SchedulerCommand = &cli.Command{

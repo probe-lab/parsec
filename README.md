@@ -212,7 +212,7 @@ and then just take the first entry of `IPv4Addresses` - that's a good enough heu
 
 ## Contributing
 
-Feel free to dive in! [Open an issue](https://github.com/dennis-tra/parsec/issues/new) or submit PRs.
+Feel free to dive in! [Open an issue](https://github.com/probe-lab/parsec/issues/new) or submit PRs.
 
 ## License
 

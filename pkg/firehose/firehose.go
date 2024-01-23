@@ -14,7 +14,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dennis-tra/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/config"
 )
 
 type Config struct {
