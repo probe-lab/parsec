@@ -1,4 +1,4 @@
-module github.com/dennis-tra/parsec
+module github.com/probe-lab/parsec
 
 go 1.19
 

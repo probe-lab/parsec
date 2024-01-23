@@ -12,18 +12,16 @@ import (
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/db"
-	"github.com/dennis-tra/parsec/pkg/dht"
-	"github.com/dennis-tra/parsec/pkg/firehose"
-	"github.com/dennis-tra/parsec/pkg/models"
-	"github.com/dennis-tra/parsec/pkg/util"
-)
-
-import (
 	"context"
 	"errors"
 	"net"
+
+	"github.com/probe-lab/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/db"
+	"github.com/probe-lab/parsec/pkg/dht"
+	"github.com/probe-lab/parsec/pkg/firehose"
+	"github.com/probe-lab/parsec/pkg/models"
+	"github.com/probe-lab/parsec/pkg/util"
 
 	log "github.com/sirupsen/logrus"
 )

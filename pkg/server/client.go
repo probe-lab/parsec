@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/dennis-tra/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/config"
 )
 
 type Client struct {

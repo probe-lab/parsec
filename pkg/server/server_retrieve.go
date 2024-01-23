@@ -16,9 +16,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dennis-tra/parsec/pkg/config"
-	"github.com/dennis-tra/parsec/pkg/dht"
-	"github.com/dennis-tra/parsec/pkg/util"
+	"github.com/probe-lab/parsec/pkg/config"
+	"github.com/probe-lab/parsec/pkg/dht"
+	"github.com/probe-lab/parsec/pkg/util"
 )
 
 type RetrieveRequest struct {
