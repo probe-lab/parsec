@@ -43,7 +43,7 @@ const ipfsProtocolPrefix = "/ipfs"
 type Host struct {
 	host.Host
 	conf          config.ServerConfig
-	fhClient      *firehose.Client
+	fhClient      firehose.Submitter
 	DHT           routing.Routing
 	BasicHost     *basichost.BasicHost
 	indexer       *Indexer
@@ -62,7 +62,7 @@ type multiHashEntry struct {
 	mhs []mh.Multihash
 }
 
-func New(ctx context.Context, fhClient *firehose.Client, conf config.ServerConfig) (*Host, error) {
+func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerConfig) (*Host, error) {
 	// Don't listen on quic-v1 since it's not supported by IPNI at the moment
 	addrs := []string{
 		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", conf.PeerPort),
