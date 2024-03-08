@@ -6,9 +6,9 @@ other [libp2p-kad-dht](https://github.com/libp2p/specs/blob/master/kad-dht/READM
 The setup is split into two components: a scheduler and a server.
 
 The server is just a normal libp2p peer that supports and participates in the public IPFS DHT and exposes a [lean HTTP
-API](./server.yaml) that allows the scheduler to issue publication and retrieval operations. Currently, the scheduler goes around all
-seven server nodes, instructs one to publish provider records for a random data blob and asks the other six to look them up.
-All seven servers take timing measurements about the publication or retrieval latencies and
+API](./server.yaml) that allows the scheduler to issue publication and retrieval operations. Currently, in [ProbeLab's](https://probelab.io/tools/parsec/)
+deployment, the scheduler goes around all seven server nodes, instructs one to publish provider records for a random data
+blob and asks the other six to look them up. All seven servers take timing measurements about the publication or retrieval latencies and
 report back the results to the scheduler. The scheduler then tracks this information in a database for later analysis.
 
 ## Table of Contents

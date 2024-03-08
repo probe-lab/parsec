@@ -37,7 +37,7 @@ type Server struct {
 	host     *dht.Host
 	dbc      db.Client
 	dbNode   *models.Node
-	fhClient *firehose.Client
+	fhClient firehose.Submitter
 }
 
 var _ network.Notifiee = (*Server)(nil)
@@ -54,19 +54,31 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		Badbits:   conf.Badbits,
 	}
 
-	fhClient, err := firehose.NewClient(ctx, fhConf)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("new firehose client: %w", err)
+	var (
+		err error
+		fh  firehose.Submitter
+	)
+	if fhConf.Stream != "" && fhConf.Region != "" {
+		log.WithField("stream", fhConf.Stream).WithField("region", fhConf.Region).Infoln("Using Firehose to track connection events")
+		fh, err = firehose.NewClient(ctx, fhConf)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("new firehose client: %w", err)
+		}
+	} else {
+		log.Infoln("Not using Firehose to track connection events")
+		fh = &firehose.NoopClient{}
 	}
 
-	parsecHost, err := dht.New(ctx, fhClient, conf)
+	parsecHost, err := dht.New(ctx, fh, conf)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("new host: %w", err)
 	}
 
-	fhClient.SetHost(parsecHost)
+	if fhClient, ok := fh.(*firehose.Client); ok {
+		fhClient.SetHost(parsecHost)
+	}
 
 	log.Infoln("Bootstrapping DHT...")
 	for _, bp := range kaddht.GetDefaultBootstrapPeerAddrInfos() {
@@ -82,7 +94,9 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		return nil, fmt.Errorf("insert node: %w", err)
 	}
 
-	fhClient.SetDBNodeID(dbNode.ID)
+	if fhClient, ok := fh.(*firehose.Client); ok {
+		fhClient.SetDBNodeID(dbNode.ID)
+	}
 
 	s := &Server{
 		cancel:   cancel,
@@ -91,7 +105,7 @@ func NewServer(ctx context.Context, dbc db.Client, conf config.ServerConfig) (*S
 		addr:     fmt.Sprintf("%s:%d", conf.ServerHost, conf.ServerPort),
 		host:     parsecHost,
 		dbNode:   dbNode,
-		fhClient: fhClient,
+		fhClient: fh,
 		done:     make(chan struct{}),
 	}
 

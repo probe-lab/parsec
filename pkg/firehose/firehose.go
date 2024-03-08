@@ -17,6 +17,10 @@ import (
 	"github.com/probe-lab/parsec/pkg/config"
 )
 
+type Submitter interface {
+	Submit(evtType string, remotePeer peer.ID, payload any) error
+}
+
 type Config struct {
 	Fleet     string
 	DBNodeID  int
@@ -48,6 +52,8 @@ type Client struct {
 	insert chan *Event
 	batch  []*Event
 }
+
+var _ Submitter = (*Client)(nil)
 
 func NewClient(ctx context.Context, conf *Config) (*Client, error) {
 	log.Infoln("Initializing firehose stream")
@@ -184,3 +190,11 @@ func (c *Client) Submit(evtType string, remotePeer peer.ID, payload any) error {
 
 	return nil
 }
+
+type NoopClient struct{}
+
+func (n *NoopClient) Submit(evtType string, remotePeer peer.ID, payload any) error {
+	return nil
+}
+
+var _ Submitter = (*NoopClient)(nil)
