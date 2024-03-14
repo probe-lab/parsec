@@ -148,9 +148,9 @@ var ServerCommand = &cli.Command{
 		&cli.StringFlag{
 			Name:        "denied-cids",
 			EnvVars:     []string{"PARSEC_SERVER_DENIED_CIDS"},
-			DefaultText: config.Server.Badbits,
-			Value:       config.Server.Badbits,
-			Destination: &config.Server.Badbits,
+			DefaultText: config.Server.DeniedCIDs,
+			Value:       config.Server.DeniedCIDs,
+			Destination: &config.Server.DeniedCIDs,
 		},
 	},
 }
