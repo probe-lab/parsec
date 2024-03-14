@@ -50,11 +50,9 @@ type Host struct {
 	multihashesLk sync.RWMutex
 	multihashes   map[string]multiHashEntry
 
-	mapMu           sync.RWMutex
-	badbitsMap      map[string]struct{}
-	deniedCIDsMap   map[string]string
-	badbitsStats    os.FileInfo
-	deniedCIDsStats os.FileInfo
+	mapMu         sync.RWMutex
+	badbitsMap    map[string]struct{}
+	deniedCIDsMap map[string]string
 }
 
 type multiHashEntry struct {
@@ -99,19 +97,9 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 		return nil, fmt.Errorf("new libp2p host: %w", err)
 	}
 
-	badbitsStats, err := os.Stat(conf.Badbits)
-	if err != nil {
-		return nil, fmt.Errorf("stats from badbits file %s: %w", conf.Badbits, err)
-	}
-
 	badbitsMap, err := loadBadbits(conf.Badbits)
 	if err != nil {
 		return nil, fmt.Errorf("load badbits: %w", err)
-	}
-
-	deniedCIDsStats, err := os.Stat(conf.DeniedCIDs)
-	if err != nil {
-		return nil, fmt.Errorf("stats from denied CIDs file %s: %w", conf.Badbits, err)
 	}
 
 	deniedCIDsMap, err := loadDeniedCIDs(conf.DeniedCIDs)
@@ -125,14 +113,12 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 	}
 
 	newHost := &Host{
-		conf:            conf,
-		BasicHost:       basicHost.(*basichost.BasicHost),
-		fhClient:        fhClient,
-		multihashes:     map[string]multiHashEntry{},
-		badbitsStats:    badbitsStats,
-		deniedCIDsStats: deniedCIDsStats,
-		badbitsMap:      badbitsMap,
-		deniedCIDsMap:   deniedCIDsMap,
+		conf:          conf,
+		BasicHost:     basicHost.(*basichost.BasicHost),
+		fhClient:      fhClient,
+		multihashes:   map[string]multiHashEntry{},
+		badbitsMap:    badbitsMap,
+		deniedCIDsMap: deniedCIDsMap,
 	}
 
 	var dht routing.Routing
@@ -267,54 +253,6 @@ func loadBadbits(filename string) (map[string]struct{}, error) {
 	log.WithField("size", len(denyMap)).Infoln("Loaded badbits file")
 
 	return denyMap, nil
-}
-
-func (h *Host) reloadMaps(ctx context.Context) {
-	t := time.NewTicker(time.Minute)
-	for {
-		select {
-		case <-ctx.Done():
-		case <-t.C:
-
-			log.Infoln("Reloading Maps")
-			badbitsStats, err := os.Stat(h.conf.Badbits)
-			if err != nil {
-				log.WithError(err).Warnln("Couldn't get badbits file stats")
-			} else if badbitsStats.ModTime().After(h.badbitsStats.ModTime()) {
-				log.Infoln("Reloading badbits map because it has changed")
-				badbitsMap, err := loadBadbits(h.conf.Badbits)
-				if err != nil {
-					log.WithError(err).Warnln("Couldn't reload badbits")
-				} else {
-					h.mapMu.Lock()
-					h.badbitsStats = badbitsStats
-					h.badbitsMap = badbitsMap
-					h.mapMu.Unlock()
-				}
-			} else {
-				log.Infoln("Not reloading badbits map because it's unchanged")
-			}
-
-			deniedCIDsStats, err := os.Stat(h.conf.DeniedCIDs)
-			if err != nil {
-				log.WithError(err).Warnln("Couldn't get denied CIDs file stats")
-			} else if deniedCIDsStats.ModTime().After(h.deniedCIDsStats.ModTime()) {
-				log.Infoln("Reloading badbits map because it has changed")
-				deniedCIDsMap, err := loadDeniedCIDs(h.conf.DeniedCIDs)
-				if err != nil {
-					log.WithError(err).Warnln("Couldn't reload denied CIDs")
-				} else {
-					h.mapMu.Lock()
-					h.deniedCIDsStats = deniedCIDsStats
-					h.deniedCIDsMap = deniedCIDsMap
-					h.mapMu.Unlock()
-				}
-			} else {
-				log.Infoln("Not reloading badbits map because it's unchanged")
-			}
-
-		}
-	}
 }
 
 type RPCRequest struct {
