@@ -19,7 +19,5 @@ RUN chown -R parsec:parsec /home/parsec
 USER parsec
 
 COPY --from=builder /build/parsec /usr/local/bin/parsec
-COPY --from=builder /build/badbits.deny badbits.deny
-COPY --from=builder /build/cids.deny cids.deny
 
 CMD parsec schedule
