@@ -13,17 +13,19 @@ report back the results to the scheduler. The scheduler then tracks this informa
 
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
-- [Concepts](#concepts)
-- [Running](#running)
-- [Implementing a Server](#implementing-a-server)
-  - [Expose the HTTP API](#expose-the-http-api)
-  - [Node Information](#node-information)
-  - [Heartbeat](#heartbeat)
-  - [`ECS_CONTAINER_METADATA_URI_V4` response:](#ecs_container_metadata_uri_v4-response)
-- [Maintainers](#maintainers)
-- [Contributing](#contributing)
-- [License](#license)
+- [`parsec`](#parsec)
+  - [Table of Contents](#table-of-contents)
+  - [Concepts](#concepts)
+  - [Running](#running)
+  - [Implementing a Server](#implementing-a-server)
+    - [Expose the HTTP API](#expose-the-http-api)
+    - [Node Information](#node-information)
+    - [Heartbeat](#heartbeat)
+    - [Optional: Prometheus Metrics](#optional-prometheus-metrics)
+    - [`ECS_CONTAINER_METADATA_URI_V4` response:](#ecs_container_metadata_uri_v4-response)
+  - [Maintainers](#maintainers)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 
 ## Concepts
