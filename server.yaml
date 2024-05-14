@@ -39,7 +39,6 @@ paths:
               properties:
                 Content:
                   type: string
-                  format: base64
                   description: |
                     Binary data the server should use to generate a CID and publish a provider record for.
                     The Go implementation generates 1024 bytes of random data and puts into this JSON field.
@@ -72,7 +71,6 @@ paths:
                 properties:
                   CID:
                     type: string
-                    format: CID
                     example: bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku
                   Duration:
                     type: integer
@@ -135,7 +133,6 @@ paths:
                 properties:
                   CID:
                     type: string
-                    format: CID
                     example: bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku
                   Duration:
                     type: integer
