@@ -84,9 +84,9 @@ CREATE TABLE nodes_ecs
 (
     -- auto generated, doesn't need to be set manually
     id             INT GENERATED ALWAYS AS IDENTITY,
-    -- available CPU
+    -- available CPUs
     cpu            INT         NOT NULL,
-    -- available memory
+    -- available memory rounded to the nearest MB
     memory         INT         NOT NULL,
     -- the peer ID of the libp2p host
     peer_id        TEXT        NOT NULL,
