@@ -25,6 +25,8 @@ paths:
           in: header
           description: An identifier of the scheduler that's doing the request. This value is used for prometheus metrics.
           example: optprov
+          schema:
+            type: string
       requestBody:
         description: |
           The request body just contains the data for which the server
@@ -99,6 +101,8 @@ paths:
           in: header
           description: An identifier of the scheduler that's doing the request. This value is used for prometheus metrics.
           example: fullrt
+          schema:
+            type: string
         - name: cid
           in: path
           description: CID to look up
@@ -159,7 +163,7 @@ paths:
       description: |
         If the server is ready to accept publication or retrieval requests this endpoint returns
         a `2xx` status code. Any other status code indicates non-readiness.
-        
+
         Note: the scheduler checks the response but functionality-wise this is a bit redundant with
         the database entry of the server.
       responses:
