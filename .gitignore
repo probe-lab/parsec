@@ -7,3 +7,4 @@ leveldb
 .venv
 badbits.deny
 cids.deny
+node_modules

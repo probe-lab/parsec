@@ -1,0 +1,196 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "Parsec Server",
+		"description": "Parsec is tooling that measures the `PUT` and `GET` performance of the IPFS public DHT. The setup is split into\ntwo components: the scheduler and the server. This document specifies the API contract that the server should\nimplement so that the scheduler can orchestrate any desired sequence of publication and retrieval steps.\n",
+		"version": "0.1.0"
+	},
+	"servers": [
+		{
+			"url": "http"
+		}
+	],
+	"paths": {
+		"/provide": {
+			"post": {
+				"tags": [
+					"Content Routing"
+				],
+				"summary": "Publishes a provider record for the given content.",
+				"description": "This endpoint accepts a binary blob, generates a CID from it,\nand publishes the corresponding provider record. Upon completion\nit returns the generated CID, the duration it took\nto publish the provider record, any error that may have occurred,\nand the number of peers in the routing table upon publication.\n",
+				"parameters": [
+					{
+						"name": "x-scheduler-id",
+						"in": "header",
+						"description": "An identifier of the scheduler that's doing the request. This value is used for prometheus metrics.",
+						"example": "optprov",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"description": "The request body just contains the data for which the server\nshould publish a provide record.\n",
+					"content": {
+						"application/json": {
+							"schema": {
+								"required": [
+									"Content"
+								],
+								"properties": {
+									"Content": {
+										"type": "string",
+										"description": "Binary data the server should use to generate a CID and publish a provider record for.\nThe Go implementation generates 1024 bytes of random data and puts into this JSON field.\n"
+									},
+									"Target": {
+										"type": "string",
+										"enum": [
+											"DHT",
+											"IPNI"
+										],
+										"default": "DHT",
+										"description": "Specifies the provide target type. If set to DHT (default when property != IPNI) the server\nwill write provider records to the DHT. If set to IPNI, the server announces an advertisement\nto an InterPlanetary Network Indexer. To which specifically is part of the servers configuration\nand the client must know how the server is configured to know the specific IPNI (e.g, whether\nit's cid.contact or another one)\n"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The result of the provider record publication. Any error that might have happened during that\nprocess should be passed to the `Error` field. For the sake of the measurement we still consider\nan erroneous publication a valid data point. Hence, a `200` status code.\n",
+						"content": {
+							"application/json": {
+								"schema": {
+									"required": [
+										"CID",
+										"Duration",
+										"Error",
+										"RoutingTableSize"
+									],
+									"properties": {
+										"CID": {
+											"type": "string",
+											"example": "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+										},
+										"Duration": {
+											"type": "integer",
+											"description": "The time it took to write all provider records in nanoseconds (default Go formatting of `time.Duration`). E.g., `1000000000` for 1s.",
+											"example": 1000000000
+										},
+										"Error": {
+											"type": "string",
+											"description": "Just any text that indicates the error reason. If no error happened, pass an empty string."
+										},
+										"RoutingTableSize": {
+											"type": "integer",
+											"description": "The number of peers in the routing table. Either right before or right after the publication. Doesn't really matter.",
+											"example": 202
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "E.g., the given JSON was malformed."
+					}
+				}
+			}
+		},
+		"/retrieve/{cid}": {
+			"post": {
+				"tags": [
+					"Content Routing"
+				],
+				"summary": "Looks up provider records for the given CID.",
+				"description": "This endpoint takes the CID from the path component, looks up provider records in the DHT,\nand measures the time it took to find the first one.\n",
+				"parameters": [
+					{
+						"name": "x-scheduler-id",
+						"in": "header",
+						"description": "An identifier of the scheduler that's doing the request. This value is used for prometheus metrics.",
+						"example": "fullrt",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "cid",
+						"in": "path",
+						"description": "CID to look up",
+						"example": "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"description": "This is a relict from development. Servers can ignore the request body.\nRight now the scheduler would send an empty JSON object.\n",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The result of the provider record look up. Any error that might have happened during that\nprocess should be passed to the `Error` field. For the sake of the measurement we still consider\nan erroneous retrieval a valid data point. Hence, a `200` status code.\n",
+						"content": {
+							"application/json": {
+								"schema": {
+									"required": [
+										"CID",
+										"Duration",
+										"Error",
+										"RoutingTableSize"
+									],
+									"properties": {
+										"CID": {
+											"type": "string",
+											"example": "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+										},
+										"Duration": {
+											"type": "integer",
+											"description": "The time it took to **find the first** provider records in nanoseconds (default Go formatting of `time.Duration`). E.g., `1000000000` for 1s.",
+											"example": 1000000000
+										},
+										"Error": {
+											"type": "string",
+											"description": "Just any text that indicates the error reason. If no error happened, pass an empty string.\nIf the lookup algorithm couldn't find a provider record but didn't really encounter\nan error, this field should be mapped to the value `not found`.\n"
+										},
+										"RoutingTableSize": {
+											"type": "integer",
+											"description": "The number of peers in the routing table. Either right before or right after the publication. Doesn't really matter.",
+											"example": 202
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "E.g., the JSON is malformed or we couldn't parse the given CID."
+					}
+				}
+			}
+		},
+		"/readiness": {
+			"get": {
+				"tags": [
+					"Operations"
+				],
+				"summary": "Indicates readiness for accepting publication or retrieval requests.",
+				"description": "If the server is ready to accept publication or retrieval requests this endpoint returns\na `2xx` status code. Any other status code indicates non-readiness.\n\nNote: the scheduler checks the response but functionality-wise this is a bit redundant with\nthe database entry of the server.\n",
+				"responses": {
+					"200": {
+						"description": "The server is ready to accept publication or retrieval requests."
+					}
+				}
+			}
+		}
+	}
+}
