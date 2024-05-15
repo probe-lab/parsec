@@ -72,7 +72,7 @@ func SchedulerAction(c *cli.Context) error {
 		}
 
 		if len(dbNodes) < 2 {
-			log.WithField("fleets", config.Scheduler.Fleets.Value()).Infoln("Less than two nodes in database. Waiting 10s and then trying again...")
+			log.WithField("fleets", config.Scheduler.Fleets.Value()).Infoln("Fewer than two nodes in database. Waiting 10s and then trying again...")
 			select {
 			case <-time.After(10 * time.Second):
 				continue
@@ -98,8 +98,8 @@ func SchedulerAction(c *cli.Context) error {
 			clients = append(clients, client)
 		}
 
-		if len(clients) == 0 {
-			log.WithField("fleets", config.Scheduler.Fleets.Value()).Infoln("Less than two nodes ready. Waiting 10s and then trying again...")
+		if len(clients) < 2 {
+			log.WithField("fleets", config.Scheduler.Fleets.Value()).Infoln("Fewer than two nodes ready. Waiting 10s and then trying again...")
 			select {
 			case <-time.After(10 * time.Second):
 				continue
