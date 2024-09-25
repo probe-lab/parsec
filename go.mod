@@ -4,7 +4,7 @@ go 1.22.0
 
 toolchain go1.23.1
 
-replace github.com/libp2p/go-libp2p-kad-dht => ./go-libp2p-kad-dht2
+replace github.com/libp2p/go-libp2p-kad-dht => ./go-libp2p-kad-dht
 
 require (
 	contrib.go.opencensus.io/exporter/prometheus v0.4.2
