@@ -18,7 +18,7 @@ import (
 	gsnet "github.com/ipfs/go-graphsync/network"
 	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
 	"github.com/ipni/go-libipni/apierror"
-	client "github.com/ipni/go-libipni/find/client/http"
+	"github.com/ipni/go-libipni/find/client"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/ipni/go-libipni/metadata"
 	provider "github.com/ipni/index-provider"
@@ -50,7 +50,7 @@ func (h *Host) initIndexer(ctx context.Context, ds *leveldb.Datastore, indexerHo
 		return nil, fmt.Errorf("start data transfer: %w", err)
 	}
 
-	eng, err := h.newIndexerEngine(ctx, dt, indexerHost)
+	eng, err := h.newIndexerEngine(ctx, indexerHost)
 	if err != nil {
 		return nil, fmt.Errorf("new indexer engine for %s: %w", indexerHost, err)
 	}
@@ -68,12 +68,11 @@ func (h *Host) initIndexer(ctx context.Context, ds *leveldb.Datastore, indexerHo
 	}, nil
 }
 
-func (h *Host) newIndexerEngine(ctx context.Context, dtManager datatransfer.Manager, url string) (*engine.Engine, error) {
+func (h *Host) newIndexerEngine(ctx context.Context, url string) (*engine.Engine, error) {
 	log.WithField("indexer", url).Infoln("Starting new indexer engine")
 
 	opts := []engine.Option{
 		engine.WithHost(h.BasicHost),
-		engine.WithDataTransfer(dtManager),
 		engine.WithPublisherKind(engine.DataTransferPublisher),
 		engine.WithDirectAnnounce(fmt.Sprintf("https://%s/ingest/announce", url)),
 	}
