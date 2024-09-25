@@ -269,7 +269,10 @@ var codecs = []multicodec.Code{
 	multicodec.DagJose,
 }
 
-func (h *Host) handlerWrapper(handler func(context.Context, peer.ID, *pb.Message) (*pb.Message, error), ctx context.Context, id peer.ID, req *pb.Message) (*pb.Message, error) {
+func (h *Host) handlerWrapper(handler func(
+	context.Context, peer.ID, *pb.Message) (*pb.Message, error),
+	ctx context.Context, id peer.ID, req *pb.Message,
+) (*pb.Message, error) {
 	switch req.GetType() {
 	case pb.Message_ADD_PROVIDER, pb.Message_GET_PROVIDERS:
 		go func() {
