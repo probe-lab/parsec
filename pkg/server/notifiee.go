@@ -15,7 +15,7 @@ type ConnectionEvent struct {
 	RemoteMaddr  multiaddr.Multiaddr
 	OpenedAt     time.Time
 	Direction    string
-	Transient    bool
+	Limited      bool
 	ConnectionID string
 	Transport    string
 	Address      net.IP
@@ -54,7 +54,7 @@ func (s *Server) trackConnectionEvent(conn network.Conn, evtType string) {
 		RemoteMaddr:  conn.RemoteMultiaddr(),
 		OpenedAt:     stat.Opened,
 		Direction:    stat.Direction.String(),
-		Transient:    stat.Transient,
+		Limited:      stat.Limited,
 		Transport:    trpt,
 		Address:      ipnet,
 	}
