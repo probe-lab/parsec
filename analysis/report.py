@@ -111,8 +111,10 @@ def get_publications(conn: sa.engine.Engine, start_date: str, end_date: str) -> 
 
 
 def week_boxplots(data: pd.DataFrame, boxcolor: str, ylabel: str, title: str) -> plt.Figure:
-    print(f"Plotting '{title}' boxplot graph...")
+    if len(data) == 0:
+        return plt.Figure()
 
+    print(f"Plotting '{title}' boxplot graph...")
     regions = list(sorted(data["region"].unique()))
 
     fig, ax = plt.subplots(len(regions) // 2 + len(regions) % 2, 2, figsize=[14, 15], dpi=DPI)
@@ -150,6 +152,9 @@ def week_boxplots(data: pd.DataFrame, boxcolor: str, ylabel: str, title: str) ->
 
 
 def regional_boxplots(retrievals: pd.DataFrame, provides: pd.DataFrame) -> plt.Figure:
+    if len(retrievals) == 0 or len(provides) == 0:
+        return plt.Figure()
+
     plots = [
         {
             "data": provides,
@@ -201,6 +206,9 @@ def regional_boxplots(retrievals: pd.DataFrame, provides: pd.DataFrame) -> plt.F
 
 
 def regional_cdfs(retrievals: pd.DataFrame, publications: pd.DataFrame) -> plt.Figure:
+    if len(retrievals) == 0 or len(publications) == 0:
+        return plt.Figure()
+
     plots = [
         {
             "data": publications,
@@ -240,6 +248,9 @@ def regional_cdfs(retrievals: pd.DataFrame, publications: pd.DataFrame) -> plt.F
 
 
 def errors(provides: pd.DataFrame, retrievals: pd.DataFrame) -> plt.Figure:
+    if len(retrievals) == 0 or len(provides) == 0:
+        return plt.Figure()
+
     plots = [
         {
             "data": provides,
