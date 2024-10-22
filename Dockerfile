@@ -6,7 +6,7 @@ COPY go.mod go.sum go-libp2p-kad-dht ./
 RUN go mod download
 
 COPY . ./
-RUN GOARCH=amd64 GOOS=linux go build -o parsec github.com/probe-lab/parsec/cmd/parsec
+RUN CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o parsec github.com/probe-lab/parsec/cmd/parsec
 
 # Create lightweight container
 FROM alpine:latest
@@ -20,4 +20,4 @@ USER parsec
 
 COPY --from=builder /build/parsec /usr/local/bin/parsec
 
-CMD parsec schedule
+CMD ["parsec", "scheduler"]
