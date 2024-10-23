@@ -40,7 +40,7 @@ func (h *Host) initIndexer(ctx context.Context, ds *leveldb.Datastore, indexerHo
 	gsnet := gsnet.NewFromLibp2pHost(h.Host)
 	dtNet := dtnetwork.NewFromLibp2pHost(h.Host)
 	gs := gsimpl.New(context.Background(), gsnet, cidlink.DefaultLinkSystem())
-	tp := gstransport.NewTransport(h.Host.ID(), gs)
+	tp := gstransport.NewTransport(h.ID(), gs)
 	dt, err := dtimpl.NewDataTransfer(ds, dtNet, tp)
 	if err != nil {
 		return nil, fmt.Errorf("new data transfer: %w", err)
@@ -72,7 +72,7 @@ func (h *Host) newIndexerEngine(ctx context.Context, url string) (*engine.Engine
 	log.WithField("indexer", url).Infoln("Starting new indexer engine")
 
 	opts := []engine.Option{
-		engine.WithHost(h.BasicHost),
+		engine.WithHost(h.Host),
 		engine.WithPublisherKind(engine.DataTransferPublisher),
 		engine.WithDirectAnnounce(fmt.Sprintf("https://%s/ingest/announce", url)),
 	}

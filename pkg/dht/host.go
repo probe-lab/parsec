@@ -24,15 +24,15 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
-	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multicodec"
-	"github.com/multiformats/go-multihash"
 	mh "github.com/multiformats/go-multihash"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
+	"go.uber.org/fx"
 
 	"github.com/probe-lab/parsec/pkg/config"
 	"github.com/probe-lab/parsec/pkg/firehose"
@@ -45,7 +45,7 @@ type Host struct {
 	conf          config.ServerConfig
 	fhClient      firehose.Submitter
 	DHT           routing.Routing
-	BasicHost     *basichost.BasicHost
+	IdService     identify.IDService
 	indexer       *Indexer
 	multihashesLk sync.RWMutex
 	multihashes   map[string]multiHashEntry
@@ -89,9 +89,11 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 		return nil, fmt.Errorf("leveldb datastore: %w", err)
 	}
 
-	basicHost, err := libp2p.New(
+	var id identify.IDService
+	host, err := libp2p.New(
 		libp2p.ResourceManager(rm),
 		libp2p.ListenAddrStrings(addrs...),
+		libp2p.WithFxOption(fx.Populate(&id)),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("new libp2p host: %w", err)
@@ -114,7 +116,7 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 
 	newHost := &Host{
 		conf:          conf,
-		BasicHost:     basicHost.(*basichost.BasicHost),
+		IdService:     id,
 		fhClient:      fhClient,
 		multihashes:   map[string]multiHashEntry{},
 		badbitsMap:    badbitsMap,
@@ -134,7 +136,7 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 			opts = append(opts, kaddht.DhtHandlerWrapper(newHost.handlerWrapper))
 		}
 
-		dht, err = fullrt.NewFullRT(basicHost, ipfsProtocolPrefix, fullrt.DHTOption(opts...))
+		dht, err = fullrt.NewFullRT(host, ipfsProtocolPrefix, fullrt.DHTOption(opts...))
 	} else {
 		log.Infoln("Using standard DHT client")
 		opts := []kaddht.Option{
@@ -148,13 +150,13 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 		if conf.FirehoseRPCEvents {
 			opts = append(opts, kaddht.DhtHandlerWrapper(newHost.handlerWrapper))
 		}
-		dht, err = kaddht.New(ctx, basicHost, opts...)
+		dht, err = kaddht.New(ctx, host, opts...)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("new router: %w", err)
 	}
 
-	newHost.Host = routedhost.Wrap(basicHost, dht)
+	newHost.Host = routedhost.Wrap(host, dht)
 	newHost.DHT = dht
 
 	if config.Server.IndexerHost != "" {
@@ -276,7 +278,7 @@ func (h *Host) handlerWrapper(handler func(
 	switch req.GetType() {
 	case pb.Message_ADD_PROVIDER, pb.Message_GET_PROVIDERS:
 		go func() {
-			_, mh, err := multihash.MHFromBytes(req.GetKey())
+			_, mh, err := mh.MHFromBytes(req.GetKey())
 			if err != nil {
 				log.WithError(err).Warnln("failed to parse multihash from key")
 				return

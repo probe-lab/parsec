@@ -36,7 +36,7 @@ func (s *Server) Disconnected(n network.Network, conn network.Conn) {
 }
 
 func (s *Server) trackConnectionEvent(conn network.Conn, evtType string) {
-	s.host.BasicHost.IDService().IdentifyConn(conn)
+	s.host.IdService.IdentifyConn(conn)
 
 	ipnet, err := manet.ToIP(conn.RemoteMultiaddr())
 	if err != nil || len(ipnet) == 0 {

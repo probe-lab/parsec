@@ -2,6 +2,7 @@ db.toml
 *.p
 
 analysis/plots/*.png
+cmd/parsec/parsec
 dist
 leveldb
 .venv
