@@ -2,9 +2,6 @@ module github.com/probe-lab/parsec
 
 go 1.23.1
 
-// Temporary prior to go-libp2p v0.37.0 release
-replace github.com/libp2p/go-libp2p => github.com/libp2p/go-libp2p v0.36.3-0.20241022183817-df7dfb647035
-
 replace github.com/libp2p/go-libp2p-kad-dht => ./go-libp2p-kad-dht
 
 require (
@@ -23,7 +20,7 @@ require (
 	github.com/ipni/index-provider v0.15.5
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/lib/pq v1.10.9
-	github.com/libp2p/go-libp2p v0.36.4
+	github.com/libp2p/go-libp2p v0.37.0
 	github.com/libp2p/go-libp2p-kad-dht v0.26.1
 	github.com/libp2p/go-libp2p-kbucket v0.6.4
 	github.com/multiformats/go-multiaddr v0.13.0
