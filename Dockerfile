@@ -2,7 +2,8 @@ FROM golang:1.23 AS builder
 
 WORKDIR /build
 
-COPY go.mod go.sum go-libp2p-kad-dht ./
+COPY go.mod go.sum ./
+COPY ./go-libp2p-kad-dht  ./go-libp2p-kad-dht
 RUN go mod download
 
 COPY . ./
