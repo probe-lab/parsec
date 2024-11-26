@@ -347,8 +347,10 @@ func (h *Host) subscribeForEvents() error {
 }
 
 func (h *Host) Close() error {
-	if err := h.indexer.engine.Shutdown(); err != nil {
-		log.WithError(err).WithField("indexer", h.indexer.hostname).Warnln("Failed to shut down indexer engine")
+	if h.indexer != nil && h.indexer.engine != nil {
+		if err := h.indexer.engine.Shutdown(); err != nil {
+			log.WithError(err).WithField("indexer", h.indexer.hostname).Warnln("Failed to shut down indexer engine")
+		}
 	}
 
 	return h.Host.Close()
