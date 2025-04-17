@@ -18,7 +18,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
-	"github.com/libp2p/go-libp2p-kad-dht/metrics"
 	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -31,7 +30,6 @@ import (
 	mh "github.com/multiformats/go-multihash"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"go.opencensus.io/stats/view"
 	"go.uber.org/fx"
 
 	"github.com/probe-lab/parsec/pkg/config"
@@ -80,9 +78,9 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 		return nil, errors.Wrap(err, "new resource manager")
 	}
 
-	if err = view.Register(metrics.DefaultViews...); err != nil {
-		return nil, fmt.Errorf("register metric views: %w", err)
-	}
+	//if err = view.Register(metrics.DefaultViews...); err != nil {
+	//	return nil, fmt.Errorf("register metric views: %w", err)
+	//}
 
 	ds, err := leveldb.NewDatastore(conf.LevelDB, nil)
 	if err != nil {
