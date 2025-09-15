@@ -1,14 +1,14 @@
 # `parsec`
 
 `parsec` is a DHT lookup performance measurement tool. It specifically measures the `PUT` and `GET` performance of the
-IPFS public DHT but could also be configured to measure
+[IPFS Amino DHT](https://blog.ipfs.tech/2023-09-amino-refactoring/) but could also be configured to measure
 other [libp2p-kad-dht](https://github.com/libp2p/specs/blob/master/kad-dht/README.md) networks.
 The setup is split into two components: a scheduler and a server.
 
 The server is just a normal libp2p peer that supports and participates in the public IPFS DHT and exposes a [lean HTTP
 API](./server.yaml) that allows the scheduler to issue publication and retrieval operations. Currently, in [ProbeLab's](https://probelab.io/tools/parsec/)
-deployment, the scheduler goes around all seven server nodes, instructs one to publish provider records for a random data
-blob and asks the other six to look them up. All seven servers take timing measurements about the publication or retrieval latencies and
+deployment, the scheduler goes around all deployed server nodes, instructs one to publish provider records for a random data
+blob and asks the others' to look them up. All servers take timing measurements about the publication or retrieval latencies and
 report back the results to the scheduler. The scheduler then tracks this information in a database for later analysis.
 
 ## Table of Contents
@@ -31,8 +31,8 @@ report back the results to the scheduler. The scheduler then tracks this informa
 ## Concepts
 
 Next to the concept of servers and schedulers there's the concept of a `fleet`. A fleet is a set of server nodes that
-have a common configuration. For example, we are running three different fleets with seven nodes each (in different regions): 1) `default` 2) `optprov` 3) `fullrt`.
-Each of these three fleets are configured differently. The `default` fleet uses the default configuration in the `go-libp2p-kad-dht` repository, the `optprov` fleet uses the optimistic provide configuration to publish data into the DHT, and the `fullrt` fleet uses the accelerated DHT client.
+have a common configuration. For example, we are running three different fleets with multiple nodes each (in different regions): 1) `default` 2) `fullrt` 3) `cid.contact`
+Each of these three fleets are configured differently. The `default` fleet uses the default configuration in the `go-libp2p-kad-dht` repository, the `optprov` fleet uses the optimistic provide configuration to publish data into the DHT, the `fullrt` fleet uses the accelerated DHT client, and the `cid.contact` fleet probes the InterPlanetary Network Index which hasn't been mentioned yet.
 
 Schedulers are then configured to interface with any combination of fleets. Right now, we have one scheduler for each fleet. As said above, it asks one node to publish content, then instructs the others to find the provider records, and then repeats the process with the next peer. However,
 we could configure a scheduler that does the same thing but with nodes from multiple fleets e.g., `default`+`fullrt` to check if content that's published with one implementation is reachable with another one.
