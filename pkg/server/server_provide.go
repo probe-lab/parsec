@@ -11,12 +11,11 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/probe-lab/parsec/pkg/config"
 	"github.com/probe-lab/parsec/pkg/dht"
 	"github.com/probe-lab/parsec/pkg/util"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type ProvideRequest struct {
