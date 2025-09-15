@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/network"
+
 	"github.com/ipfs/go-cid"
 	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p"
@@ -21,14 +23,12 @@ import (
 	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multicodec"
 	mh "github.com/multiformats/go-multihash"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 
@@ -75,7 +75,7 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 	limiter := rcmgr.NewFixedLimiter(rcmgr.InfiniteLimits)
 	rm, err := rcmgr.NewResourceManager(limiter)
 	if err != nil {
-		return nil, errors.Wrap(err, "new resource manager")
+		return nil, fmt.Errorf("new resource manager: %w", err)
 	}
 
 	//if err = view.Register(metrics.DefaultViews...); err != nil {
@@ -131,7 +131,7 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 			kaddht.Datastore(ds),
 		}
 		if conf.FirehoseRPCEvents {
-			opts = append(opts, kaddht.DhtHandlerWrapper(newHost.handlerWrapper))
+			opts = append(opts, kaddht.OnRequestHook(newHost.handlerWrapper))
 		}
 
 		dht, err = fullrt.NewFullRT(host, ipfsProtocolPrefix, fullrt.DHTOption(opts...))
@@ -140,13 +140,13 @@ func New(ctx context.Context, fhClient firehose.Submitter, conf config.ServerCon
 		opts := []kaddht.Option{
 			kaddht.Mode(mode),
 			kaddht.Datastore(ds),
-			kaddht.DhtHandlerWrapper(newHost.handlerWrapper),
+			kaddht.OnRequestHook(newHost.handlerWrapper),
 		}
 		if conf.OptProv {
 			opts = append(opts, kaddht.EnableOptimisticProvide())
 		}
 		if conf.FirehoseRPCEvents {
-			opts = append(opts, kaddht.DhtHandlerWrapper(newHost.handlerWrapper))
+			opts = append(opts, kaddht.OnRequestHook(newHost.handlerWrapper))
 		}
 		dht, err = kaddht.New(ctx, host, opts...)
 	}
@@ -269,10 +269,7 @@ var codecs = []multicodec.Code{
 	multicodec.DagJose,
 }
 
-func (h *Host) handlerWrapper(handler func(
-	context.Context, peer.ID, *pb.Message) (*pb.Message, error),
-	ctx context.Context, id peer.ID, req *pb.Message,
-) (*pb.Message, error) {
+func (h *Host) handlerWrapper(ctx context.Context, s network.Stream, req *pb.Message) {
 	switch req.GetType() {
 	case pb.Message_ADD_PROVIDER, pb.Message_GET_PROVIDERS:
 		go func() {
@@ -305,20 +302,18 @@ func (h *Host) handlerWrapper(handler func(
 				if _, found := h.badbitsMap[matchStr]; found {
 					rec.Match = preimage
 					rec.Source = "badbits"
-					log.WithField("preimage", preimage).Infoln("Preimage found!", id)
+					log.WithField("preimage", preimage).Infoln("Preimage found!", s.Conn().RemotePeer())
 					break
 				}
 			}
 			h.mapMu.RUnlock()
 
-			if err := h.fhClient.Submit("dht_rpc", id, rec); err != nil {
+			if err := h.fhClient.Submit("dht_rpc", s.Conn().RemotePeer(), rec); err != nil {
 				log.WithError(err).Warnln("Couldn't submit add_provider event")
 			}
 		}()
 	default:
 	}
-
-	return handler(ctx, id, req)
 }
 
 func (h *Host) subscribeForEvents() error {

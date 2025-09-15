@@ -58,7 +58,7 @@ func SchedulerAction(c *cli.Context) error {
 
 	provNodeIdx := 0
 	for {
-		// If context was cancelled stop here
+		// If context was canceled, stop here
 		select {
 		case <-c.Context.Done():
 			return c.Context.Err()
@@ -83,7 +83,7 @@ func SchedulerAction(c *cli.Context) error {
 
 		activeNodes.Set(float64(len(dbNodes)))
 
-		clients := []*server.Client{}
+		var clients []*server.Client
 		for _, node := range dbNodes {
 			client := server.NewClient(node.IPAddress, node.ServerPort, strings.Join(config.Scheduler.Fleets.Value(), ","), config.Routing(config.Scheduler.Routing))
 

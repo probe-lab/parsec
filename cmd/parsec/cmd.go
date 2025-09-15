@@ -12,10 +12,10 @@ import (
 	"syscall"
 
 	ocprom "contrib.go.opencensus.io/exporter/prometheus"
+	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"github.com/volatiletech/sqlboiler/v4/boil"
 
 	"github.com/probe-lab/parsec/pkg/config"
 )
@@ -35,7 +35,7 @@ func main() {
 		Authors: []*cli.Author{
 			{
 				Name:  "Dennis Trautwein",
-				Email: "dennis@protocol.ai",
+				Email: "dennis@probelab.io",
 			},
 		},
 		Version: fmt.Sprintf("v%s+%s", RawVersion, ShortCommit),

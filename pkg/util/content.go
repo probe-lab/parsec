@@ -3,13 +3,13 @@ package util
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 
 	"github.com/ipfs/go-cid"
 	u "github.com/ipfs/go-ipfs-util"
 	kbucket "github.com/libp2p/go-libp2p-kbucket"
 	"github.com/libp2p/go-libp2p/core/peer"
 	mh "github.com/multiformats/go-multihash"
-	"github.com/pkg/errors"
 )
 
 // Content encapsulates multiple representations of the same data.
@@ -23,14 +23,14 @@ type Content struct {
 func NewRandomContent() (*Content, error) {
 	raw := make([]byte, 1024)
 	if _, err := rand.Read(raw); err != nil {
-		return nil, errors.Wrap(err, "read rand data")
+		return nil, fmt.Errorf("read rand data: %w", err)
 	}
 	hash := sha256.New()
 	hash.Write(raw)
 
 	mhash, err := mh.Encode(hash.Sum(nil), mh.SHA2_256)
 	if err != nil {
-		return nil, errors.Wrap(err, "encode multi hash")
+		return nil, fmt.Errorf("encode multi hash: %w", err)
 	}
 
 	return &Content{
@@ -47,7 +47,7 @@ func ContentFrom(raw []byte) (*Content, error) {
 
 	mhash, err := mh.Encode(hash.Sum(nil), mh.SHA2_256)
 	if err != nil {
-		return nil, errors.Wrap(err, "encode multi hash")
+		return nil, fmt.Errorf("encode multi hash: %w", err)
 	}
 
 	return &Content{

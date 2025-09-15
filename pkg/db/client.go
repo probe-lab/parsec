@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -14,16 +15,15 @@ import (
 	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
+	"github.com/aarondl/null/v8"
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 
 	"github.com/probe-lab/parsec/pkg/config"
 	"github.com/probe-lab/parsec/pkg/models"
@@ -64,7 +64,7 @@ func InitDBClient(ctx context.Context, conf config.GlobalConfig) (Client, error)
 
 	driverName, err := ocsql.Register("postgres")
 	if err != nil {
-		return nil, errors.Wrap(err, "register ocsql")
+		return nil, fmt.Errorf("register ocsql: %w", err)
 	}
 
 	connStr := fmt.Sprintf(
