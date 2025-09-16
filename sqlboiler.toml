@@ -4,7 +4,7 @@ wipe     = true
 [psql]
 dbname = "parsec"
 host = "localhost"
-port = 5435
+port = 5432
 user = "parsec"
 pass = "password"
 sslmode = "disable"

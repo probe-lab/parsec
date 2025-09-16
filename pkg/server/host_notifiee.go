@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 	log "github.com/sirupsen/logrus"
@@ -21,22 +22,22 @@ type ConnectionEvent struct {
 	Address      net.IP
 }
 
-func (s *Server) Listen(n network.Network, multiaddr multiaddr.Multiaddr) {
+func (h *Host) Listen(n network.Network, multiaddr multiaddr.Multiaddr) {
 }
 
-func (s *Server) ListenClose(n network.Network, multiaddr multiaddr.Multiaddr) {
+func (h *Host) ListenClose(n network.Network, multiaddr multiaddr.Multiaddr) {
 }
 
-func (s *Server) Connected(n network.Network, conn network.Conn) {
-	go s.trackConnectionEvent(conn, "connect")
+func (h *Host) Connected(n network.Network, conn network.Conn) {
+	go h.trackConnectionEvent(conn, "connect")
 }
 
-func (s *Server) Disconnected(n network.Network, conn network.Conn) {
-	go s.trackConnectionEvent(conn, "disconnect")
+func (h *Host) Disconnected(n network.Network, conn network.Conn) {
+	go h.trackConnectionEvent(conn, "disconnect")
 }
 
-func (s *Server) trackConnectionEvent(conn network.Conn, evtType string) {
-	s.host.IdService.IdentifyConn(conn)
+func (h *Host) trackConnectionEvent(conn network.Conn, evtType string) {
+	h.IdService.IdentifyConn(conn)
 
 	ipnet, err := manet.ToIP(conn.RemoteMultiaddr())
 	if err != nil || len(ipnet) == 0 {
@@ -59,7 +60,12 @@ func (s *Server) trackConnectionEvent(conn network.Conn, evtType string) {
 		Address:      ipnet,
 	}
 
-	if err := s.fhClient.Submit(evtType, conn.RemotePeer(), ce); err != nil {
+	addrInfo := peer.AddrInfo{
+		ID:    conn.RemotePeer(),
+		Addrs: []multiaddr.Multiaddr{conn.RemoteMultiaddr()},
+	}
+
+	if err := h.fhClient.Submit(evtType, h.ID(), addrInfo, h.AgentVersion(conn.RemotePeer()), ce); err != nil {
 		log.WithError(err).Warnf("Couldn't submit %s event", evtType)
 	}
 }
