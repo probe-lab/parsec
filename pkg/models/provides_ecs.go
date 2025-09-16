@@ -32,6 +32,7 @@ type Provide struct {
 	Cid         string      `boil:"cid" json:"cid" toml:"cid" yaml:"cid"`
 	Error       null.String `boil:"error" json:"error,omitempty" toml:"error" yaml:"error,omitempty"`
 	CreatedAt   time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	Step        string      `boil:"step" json:"step" toml:"step" yaml:"step"`
 
 	R *provideR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L provideL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -46,6 +47,7 @@ var ProvideColumns = struct {
 	Cid         string
 	Error       string
 	CreatedAt   string
+	Step        string
 }{
 	ID:          "id",
 	SchedulerID: "scheduler_id",
@@ -55,6 +57,7 @@ var ProvideColumns = struct {
 	Cid:         "cid",
 	Error:       "error",
 	CreatedAt:   "created_at",
+	Step:        "step",
 }
 
 var ProvideTableColumns = struct {
@@ -66,6 +69,7 @@ var ProvideTableColumns = struct {
 	Cid         string
 	Error       string
 	CreatedAt   string
+	Step        string
 }{
 	ID:          "provides_ecs.id",
 	SchedulerID: "provides_ecs.scheduler_id",
@@ -75,6 +79,7 @@ var ProvideTableColumns = struct {
 	Cid:         "provides_ecs.cid",
 	Error:       "provides_ecs.error",
 	CreatedAt:   "provides_ecs.created_at",
+	Step:        "provides_ecs.step",
 }
 
 // Generated where
@@ -173,6 +178,7 @@ var ProvideWhere = struct {
 	Cid         whereHelperstring
 	Error       whereHelpernull_String
 	CreatedAt   whereHelpertime_Time
+	Step        whereHelperstring
 }{
 	ID:          whereHelperint{field: "\"provides_ecs\".\"id\""},
 	SchedulerID: whereHelperint{field: "\"provides_ecs\".\"scheduler_id\""},
@@ -182,6 +188,7 @@ var ProvideWhere = struct {
 	Cid:         whereHelperstring{field: "\"provides_ecs\".\"cid\""},
 	Error:       whereHelpernull_String{field: "\"provides_ecs\".\"error\""},
 	CreatedAt:   whereHelpertime_Time{field: "\"provides_ecs\".\"created_at\""},
+	Step:        whereHelperstring{field: "\"provides_ecs\".\"step\""},
 }
 
 // ProvideRels is where relationship names are stored.
@@ -240,8 +247,8 @@ func (r *provideR) GetScheduler() *Scheduler {
 type provideL struct{}
 
 var (
-	provideAllColumns            = []string{"id", "scheduler_id", "node_id", "rt_size", "duration", "cid", "error", "created_at"}
-	provideColumnsWithoutDefault = []string{"scheduler_id", "node_id", "rt_size", "duration", "cid", "created_at"}
+	provideAllColumns            = []string{"id", "scheduler_id", "node_id", "rt_size", "duration", "cid", "error", "created_at", "step"}
+	provideColumnsWithoutDefault = []string{"scheduler_id", "node_id", "rt_size", "duration", "cid", "created_at", "step"}
 	provideColumnsWithDefault    = []string{"id", "error"}
 	providePrimaryKeyColumns     = []string{"id"}
 	provideGeneratedColumns      = []string{"id"}

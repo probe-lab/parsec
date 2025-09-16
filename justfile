@@ -45,7 +45,7 @@ db-reset: migrate-down migrate-up models
 
 # Start database container
 database:
-    docker run --rm -p 5435:5432 -e POSTGRES_PASSWORD=password -e POSTGRES_USER=parsec -e POSTGRES_DB=parsec postgres:14
+    docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=password -e POSTGRES_USER=parsec -e POSTGRES_DB=parsec postgres:14
 
 # Generate models
 models:
@@ -53,8 +53,8 @@ models:
 
 # Run database migrations up
 migrate-up:
-    migrate -database 'postgres://parsec:password@localhost:5435/parsec?sslmode=disable' -path pkg/db/migrations up
+    migrate -database 'postgres://parsec:password@localhost:5432/parsec?sslmode=disable' -path pkg/db/migrations up
 
 # Run database migrations down
 migrate-down:
-    migrate -database 'postgres://parsec:password@localhost:5435/parsec?sslmode=disable' -path pkg/db/migrations down
+    migrate -database 'postgres://parsec:password@localhost:5432/parsec?sslmode=disable' -path pkg/db/migrations down

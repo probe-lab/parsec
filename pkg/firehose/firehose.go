@@ -9,36 +9,30 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/firehose"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/probe-lab/parsec/pkg/config"
 )
 
 type Submitter interface {
-	Submit(evtType string, remotePeer peer.ID, payload any) error
+	Submit(evtType string, localID peer.ID, addrInfo peer.AddrInfo, agentVersion string, payload any) error
 }
 
 type Config struct {
 	Fleet     string
-	DBNodeID  int
-	Region    string
+	AWSRegion string
 	Stream    string
 	BatchSize int
 	BatchTime time.Duration
-	Badbits   string
 }
 
-type Event struct {
+type event struct {
 	EventType    string
 	Timestamp    time.Time
 	RemotePeer   string
 	RemoteMaddrs []multiaddr.Multiaddr
 	PartitionKey string
 	AgentVersion string
-	DBNodeID     int
 	Fleet        string
 	LocalPeer    string
 	Region       string
@@ -46,40 +40,36 @@ type Event struct {
 }
 
 type Client struct {
-	host   host.Host
 	fh     *firehose.Firehose
 	conf   *Config
-	insert chan *Event
-	batch  []*Event
+	insert chan *event
+	batch  []*event
 }
 
 var _ Submitter = (*Client)(nil)
 
-func NewClient(ctx context.Context, conf *Config) (*Client, error) {
-	log.Infoln("Initializing firehose stream")
-	fh, err := initStream(conf.Region, conf.Stream)
-	if err != nil {
-		return nil, err
+func NewClient(ctx context.Context, conf *Config) (Submitter, error) {
+	if conf.Stream != "" && conf.AWSRegion != "" {
+		log.WithField("stream", conf.Stream).WithField("region", conf.AWSRegion).Infoln("Using Firehose to track connection events")
+		fh, err := initStream(conf.AWSRegion, conf.Stream)
+		if err != nil {
+			return nil, fmt.Errorf("new firehose stream: %w", err)
+		}
+
+		c := &Client{
+			fh:     fh,
+			conf:   conf,
+			insert: make(chan *event),
+			batch:  []*event{},
+		}
+
+		go c.loop(ctx)
+
+		return c, nil
+	} else {
+		log.Infoln("Not using Firehose to track connection events")
+		return &NoopClient{}, nil
 	}
-
-	p := &Client{
-		fh:     fh,
-		conf:   conf,
-		insert: make(chan *Event),
-		batch:  []*Event{},
-	}
-
-	go p.loop(ctx)
-
-	return p, nil
-}
-
-func (c *Client) SetHost(h host.Host) {
-	c.host = h
-}
-
-func (c *Client) SetDBNodeID(id int) {
-	c.conf.DBNodeID = id
 }
 
 func initStream(region, stream string) (*firehose.Firehose, error) {
@@ -155,34 +145,25 @@ func (c *Client) flush() {
 		logEntry.Infof("Flushed %d records!\n", len(putRecords))
 	}
 
-	c.batch = []*Event{}
+	c.batch = []*event{}
 }
 
-func (c *Client) Submit(evtType string, remotePeer peer.ID, payload any) error {
+func (c *Client) Submit(evtType string, localID peer.ID, addrInfo peer.AddrInfo, agentVersion string, payload any) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 
-	avStr := ""
-	agentVersion, err := c.host.Peerstore().Get(remotePeer, "AgentVersion")
-	if err == nil {
-		if str, ok := agentVersion.(string); ok {
-			avStr = str
-		}
-	}
-
-	evt := &Event{
+	evt := &event{
 		EventType:    evtType,
 		Timestamp:    time.Now(),
-		RemotePeer:   remotePeer.String(),
-		RemoteMaddrs: c.host.Peerstore().Addrs(remotePeer),
-		PartitionKey: fmt.Sprintf("%s-%s", config.Global.AWSRegion, c.conf.Fleet),
-		AgentVersion: avStr,
-		DBNodeID:     c.conf.DBNodeID,
+		RemotePeer:   addrInfo.ID.String(),
+		RemoteMaddrs: addrInfo.Addrs,
+		PartitionKey: fmt.Sprintf("%s-%s", c.conf.AWSRegion, c.conf.Fleet),
+		AgentVersion: agentVersion,
 		Fleet:        c.conf.Fleet,
-		LocalPeer:    c.host.ID().String(),
-		Region:       config.Global.AWSRegion,
+		LocalPeer:    localID.String(),
+		Region:       c.conf.AWSRegion,
 		Payload:      data,
 	}
 
@@ -193,7 +174,7 @@ func (c *Client) Submit(evtType string, remotePeer peer.ID, payload any) error {
 
 type NoopClient struct{}
 
-func (n *NoopClient) Submit(evtType string, remotePeer peer.ID, payload any) error {
+func (n *NoopClient) Submit(evtType string, localID peer.ID, addrInfo peer.AddrInfo, agentVersion string, payload any) error {
 	return nil
 }
 

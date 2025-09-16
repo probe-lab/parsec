@@ -1,6 +1,13 @@
 package main
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"context"
+	"time"
+
+	leveldb "github.com/ipfs/go-ds-leveldb"
+	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
+)
 
 var activeNodes = prometheus.NewGauge(
 	prometheus.GaugeOpts{
@@ -25,8 +32,28 @@ var issuedRetrievals = prometheus.NewCounterVec(
 	[]string{"success"},
 )
 
-func init() {
-	prometheus.MustRegister(activeNodes)
-	prometheus.MustRegister(issuedProvides)
-	prometheus.MustRegister(issuedRetrievals)
+var diskUsageGauge = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Name: "parsec_datastore_disk_usage",
+		Help: "Disk usage of leveldb",
+	},
+)
+
+func measureDiskUsage(ctx context.Context, ds *leveldb.Datastore) {
+	ticker := time.NewTicker(time.Minute)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
+		usage, err := ds.DiskUsage(ctx)
+		if err != nil {
+			log.WithError(err).Warnln("Failed getting disk usage")
+			continue
+		}
+
+		diskUsageGauge.Set(float64(usage))
+	}
 }

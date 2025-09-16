@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -25,16 +26,15 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/probe-lab/parsec/pkg/config"
 	"github.com/probe-lab/parsec/pkg/models"
 )
 
 type Client interface {
 	InsertScheduler(ctx context.Context, fleets []string) (*models.Scheduler, error)
-	InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error)
+	InsertNode(ctx context.Context, model *NodeModel) (*models.Node, error)
 	GetNodes(ctx context.Context, fleets []string) (models.NodeSlice, error)
 	InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Retrieval, error)
-	InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Provide, error)
+	InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int, step string) (*models.Provide, error)
 	UpdateHeartbeat(ctx context.Context, dbNode *models.Node) error
 	UpdateOfflineSince(ctx context.Context, dbNode *models.Node) error
 	Close() error
@@ -43,23 +43,32 @@ type Client interface {
 //go:embed migrations
 var migrations embed.FS
 
-type DBClient struct {
-	// Database handle
-	handle *sql.DB
-	conf   config.GlobalConfig
+type PGClientConfig struct {
+	Host     string
+	Port     int
+	Name     string
+	User     string
+	Password string
+	SSLMode  string
 }
 
-var _ Client = (*DBClient)(nil)
+type PGClient struct {
+	// Database handle
+	handle *sql.DB
+	conf   *PGClientConfig
+}
 
-// InitDBClient establishes a database connection with the provided configuration and applies any pending
+var _ Client = (*PGClient)(nil)
+
+// InitPGClient establishes a database connection with the provided configuration and applies any pending
 // migrations
-func InitDBClient(ctx context.Context, conf config.GlobalConfig) (Client, error) {
+func InitPGClient(ctx context.Context, conf *PGClientConfig) (Client, error) {
 	log.WithFields(log.Fields{
-		"host": conf.DatabaseHost,
-		"port": conf.DatabasePort,
-		"name": conf.DatabaseName,
-		"user": conf.DatabaseUser,
-		"ssl":  conf.DatabaseSSLMode,
+		"host": conf.Host,
+		"port": conf.Port,
+		"name": conf.Name,
+		"user": conf.User,
+		"ssl":  conf.SSLMode,
 	}).Infoln("Initializing database client")
 
 	driverName, err := ocsql.Register("postgres")
@@ -69,7 +78,7 @@ func InitDBClient(ctx context.Context, conf config.GlobalConfig) (Client, error)
 
 	connStr := fmt.Sprintf(
 		"host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
-		conf.DatabaseHost, conf.DatabasePort, conf.DatabaseName, conf.DatabaseUser, conf.DatabasePassword, conf.DatabaseSSLMode,
+		conf.Host, conf.Port, conf.Name, conf.User, conf.Password, conf.SSLMode,
 	)
 
 	// Open database handle
@@ -83,7 +92,7 @@ func InitDBClient(ctx context.Context, conf config.GlobalConfig) (Client, error)
 		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 
-	client := &DBClient{
+	client := &PGClient{
 		handle: db,
 		conf:   conf,
 	}
@@ -91,11 +100,11 @@ func InitDBClient(ctx context.Context, conf config.GlobalConfig) (Client, error)
 	return client, client.applyMigrations()
 }
 
-func (c *DBClient) Close() error {
+func (c *PGClient) Close() error {
 	return c.handle.Close()
 }
 
-func (c *DBClient) applyMigrations() error {
+func (c *PGClient) applyMigrations() error {
 	tmpDir, err := os.MkdirTemp("", "parsec")
 	if err != nil {
 		return fmt.Errorf("create migrations tmp dir: %w", err)
@@ -130,7 +139,7 @@ func (c *DBClient) applyMigrations() error {
 		return fmt.Errorf("create driver instance: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(tmpDir, "migrations"), c.conf.DatabaseName, driver)
+	m, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(tmpDir, "migrations"), c.conf.Name, driver)
 	if err != nil {
 		return fmt.Errorf("create migrate instance: %w", err)
 	}
@@ -142,7 +151,7 @@ func (c *DBClient) applyMigrations() error {
 	return nil
 }
 
-func (c *DBClient) InsertScheduler(ctx context.Context, fleets []string) (*models.Scheduler, error) {
+func (c *PGClient) InsertScheduler(ctx context.Context, fleets []string) (*models.Scheduler, error) {
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
 		return nil, fmt.Errorf("read build info error")
@@ -161,12 +170,18 @@ func (c *DBClient) InsertScheduler(ctx context.Context, fleets []string) (*model
 	return s, s.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error) {
-	sp, err := c.conf.ServerProcess()
-	if err != nil {
-		return nil, fmt.Errorf("server process: %w", err)
-	}
+type NodeModel struct {
+	PeerID     peer.ID
+	AWSRegion  string
+	Fleet      string
+	ServerPort int
+	PeerPort   int
+	CPU        int64
+	Memory     int64
+	PrivateIP  net.IP
+}
 
+func (c *PGClient) InsertNode(ctx context.Context, model *NodeModel) (*models.Node, error) {
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
 		return nil, fmt.Errorf("read build info error")
@@ -178,22 +193,22 @@ func (c *DBClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.S
 	}
 
 	n := &models.Node{
-		CPU:          int(sp.CPU),
-		Memory:       int(sp.Memory),
-		PeerID:       peerID.String(),
-		Region:       c.conf.AWSRegion,
+		CPU:          int(model.CPU),
+		Memory:       int(model.Memory),
+		PeerID:       model.PeerID.String(),
+		Region:       model.AWSRegion,
 		CMD:          strings.Join(os.Args, " "),
 		Dependencies: biData,
-		IPAddress:    sp.PrivateIP.String(),
-		Fleet:        conf.Fleet,
-		ServerPort:   int16(conf.ServerPort),
-		PeerPort:     int16(conf.PeerPort),
+		IPAddress:    model.PrivateIP.String(),
+		Fleet:        model.Fleet,
+		ServerPort:   int16(model.ServerPort),
+		PeerPort:     int16(model.PeerPort),
 	}
 
 	return n, n.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) GetNodes(ctx context.Context, fleets []string) (models.NodeSlice, error) {
+func (c *PGClient) GetNodes(ctx context.Context, fleets []string) (models.NodeSlice, error) {
 	wheres := []qm.QueryMod{
 		models.NodeWhere.OfflineSince.IsNull(),
 		models.NodeWhere.LastHeartbeat.GTE(null.TimeFrom(time.Now().Add(-2 * time.Minute))),
@@ -203,7 +218,7 @@ func (c *DBClient) GetNodes(ctx context.Context, fleets []string) (models.NodeSl
 	return models.Nodes(wheres...).All(ctx, c.handle)
 }
 
-func (c *DBClient) UpdateHeartbeat(ctx context.Context, dbNode *models.Node) error {
+func (c *PGClient) UpdateHeartbeat(ctx context.Context, dbNode *models.Node) error {
 	log.Debugln("Update heartbeat", dbNode.ID)
 	dbNode.LastHeartbeat = null.TimeFrom(time.Now())
 	dbNode.OfflineSince = null.NewTime(time.Now(), false)
@@ -213,14 +228,14 @@ func (c *DBClient) UpdateHeartbeat(ctx context.Context, dbNode *models.Node) err
 	return err
 }
 
-func (c *DBClient) UpdateOfflineSince(ctx context.Context, dbNode *models.Node) error {
+func (c *PGClient) UpdateOfflineSince(ctx context.Context, dbNode *models.Node) error {
 	log.Debugln("Update node offline", dbNode.ID)
 	dbNode.OfflineSince = null.TimeFrom(time.Now())
 	_, err := dbNode.Update(ctx, c.handle, boil.Infer())
 	return err
 }
 
-func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Retrieval, error) {
+func (c *PGClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Retrieval, error) {
 	r := &models.Retrieval{
 		Cid:         cid,
 		NodeID:      dbNodeID,
@@ -233,13 +248,14 @@ func (c *DBClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string
 	return r, r.Insert(ctx, c.handle, boil.Infer())
 }
 
-func (c *DBClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Provide, error) {
+func (c *PGClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int, step string) (*models.Provide, error) {
 	p := &models.Provide{
 		Cid:         cid,
 		NodeID:      dbNodeID,
 		Duration:    duration,
 		RTSize:      rtSize,
 		SchedulerID: schedulerID,
+		Step:        step,
 		Error:       null.NewString(errStr, errStr != ""),
 	}
 
@@ -260,15 +276,15 @@ func (d *DummyClient) InsertScheduler(ctx context.Context, fleets []string) (*mo
 	return &models.Scheduler{Fleets: fleets}, nil
 }
 
-func (d *DummyClient) InsertNode(ctx context.Context, peerID peer.ID, conf config.ServerConfig) (*models.Node, error) {
-	return &models.Node{Region: "dummy", PeerID: peerID.String()}, nil
+func (d *DummyClient) InsertNode(ctx context.Context, model *NodeModel) (*models.Node, error) {
+	return &models.Node{Region: "dummy", PeerID: model.PeerID.String()}, nil
 }
 
 func (d *DummyClient) InsertRetrieval(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Retrieval, error) {
 	return &models.Retrieval{NodeID: dbNodeID}, nil
 }
 
-func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int) (*models.Provide, error) {
+func (d *DummyClient) InsertProvide(ctx context.Context, dbNodeID int, cid string, duration float64, rtSize int, errStr string, schedulerID int, step string) (*models.Provide, error) {
 	return &models.Provide{NodeID: dbNodeID}, nil
 }
 

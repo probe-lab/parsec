@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: parsec server
+    command: parsec server dht
     container_name: parsec-server-1
     environment:
       AWS_REGION: docker
@@ -49,7 +49,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: parsec server
+    command: parsec server dht
     container_name: parsec-server-2
     environment:
       AWS_REGION: docker
