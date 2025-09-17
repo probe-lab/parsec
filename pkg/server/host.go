@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -42,22 +43,39 @@ type Host struct {
 	host.Host
 	conf      *HostConfig
 	fhClient  firehose.Submitter
-	IdService identify.IDService
+	idService identify.IDService
+
+	publicIP *atomic.Value
 }
 
 func InitHost(ctx context.Context, fhClient firehose.Submitter, conf *HostConfig) (*Host, error) {
 	addrs := []string{
 		fmt.Sprintf("/ip4/%s/tcp/%d", conf.Host, conf.Port),
 		fmt.Sprintf("/ip4/%s/udp/%d/quic-v1", conf.Host, conf.Port),
-		fmt.Sprintf("/ip4/%s/udp/%d/quic-v1/webtransport", conf.Host, conf.Port),
-		fmt.Sprintf("/ip4/%s/udp/%d/webrtc-direct", conf.Host, conf.Port),
 	}
 
+	var publicIP atomic.Value
 	var id identify.IDService
 	libp2pHost, err := libp2p.New(
 		libp2p.ResourceManager(&network.NullResourceManager{}),
 		libp2p.ListenAddrStrings(addrs...),
 		libp2p.WithFxOption(fx.Populate(&id)),
+		libp2p.AddrsFactory(func(maddrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
+			// In the case of IPNI, we don't add the DHT routing subsystem. This
+			// seems to cause go-libp2p to forget that it's publicly reachable.
+			// Right after we connect to the bootstrap peers, we will detect the
+			// public address. We then extract it in "waitForPublicIPv4Address"
+			// and store it on `publicIP`. As soon as that variable is set, we
+			// artificially add the corresponding multiaddresses to the list.
+			data := publicIP.Load()
+			if data == nil {
+				return maddrs
+			}
+			return append(maddrs,
+				multiaddr.StringCast(fmt.Sprintf("/ip4/%s/tcp/%d", data.(string), conf.Port)),
+				multiaddr.StringCast(fmt.Sprintf("/ip4/%s/udp/%d/quic-v1", data.(string), conf.Port)),
+			)
+		}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("new libp2p host: %w", err)
@@ -66,7 +84,8 @@ func InitHost(ctx context.Context, fhClient firehose.Submitter, conf *HostConfig
 	h := &Host{
 		Host:      libp2pHost,
 		fhClient:  fhClient,
-		IdService: id,
+		idService: id,
+		publicIP:  &publicIP,
 	}
 
 	if conf.FirehoseConnectionEvents {
@@ -82,6 +101,10 @@ func InitHost(ctx context.Context, fhClient firehose.Submitter, conf *HostConfig
 	}
 
 	log.WithField("localID", h.ID()).Info("Initialized new libp2p host")
+
+	if err = h.waitForPublicIPv4Address(ctx); err != nil {
+		return nil, fmt.Errorf("wait for public IPv4 address: %w", err)
+	}
 
 	if err = h.subscribeForEvents(); err != nil {
 		return nil, fmt.Errorf("subscribe for events: %w", err)
@@ -105,10 +128,10 @@ func (h *Host) AgentVersion(p peer.ID) string {
 	return ""
 }
 
-func (h *Host) waitForPublicIPv4Address(ctx context.Context) (string, error) {
+func (h *Host) waitForPublicIPv4Address(ctx context.Context) error {
 	sub, err := h.EventBus().Subscribe(new(event.EvtLocalAddressesUpdated))
 	if err != nil {
-		return "", fmt.Errorf("event bus subscription: %w", err)
+		return fmt.Errorf("event bus subscription: %w", err)
 	}
 	defer func() {
 		if err := sub.Close(); err != nil {
@@ -124,7 +147,7 @@ func (h *Host) waitForPublicIPv4Address(ctx context.Context) (string, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return ctx.Err()
 		case evt := <-sub.Out():
 			switch tevt := evt.(type) {
 			case event.EvtLocalAddressesUpdated:
@@ -139,10 +162,10 @@ func (h *Host) waitForPublicIPv4Address(ctx context.Context) (string, error) {
 					}
 
 					log.Infoln("Detected public IPv4 address:", ip)
-					return ip, nil
+					h.publicIP.Store(ip)
+					return nil
 				}
 			}
-
 		}
 	}
 }

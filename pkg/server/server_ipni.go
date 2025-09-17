@@ -62,14 +62,9 @@ type IPNIServer struct {
 var _ IServer = (*IPNIServer)(nil)
 
 func InitIPNIServer(ctx context.Context, h *Host, ds datastore.Batching, conf *IPNIServerConfig) (*IPNIServer, error) {
-	publicAddr, err := h.waitForPublicIPv4Address(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("wait for public address: %w", err)
-	}
-
 	log.Infoln("Init indexer", conf.IndexerHost)
 
-	publisherAnnounceHostPort := fmt.Sprintf("/ip4/%s/tcp/%d/http", publicAddr, conf.PublisherPort)
+	publisherAnnounceHostPort := fmt.Sprintf("/ip4/%s/tcp/%d/http", h.publicIP.Load().(string), conf.PublisherPort)
 	directAnnounce := fmt.Sprintf("https://%s/ingest/announce", conf.IndexerHost)
 	engine.WithRetrievalAddrs()
 	opts := []engine.Option{
@@ -411,7 +406,13 @@ func (i *IPNIServer) httpHandler(handler http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		ts := time.Now()
 		ask := path.Base(req.URL.Path)
-		logEntry := log.WithField("ask", ask).WithField("reqType", req.Header.Get(ipnisync.CidSchemaHeader))
+		logEntry := log.WithField("ask", ask)
+
+		reqType := req.Header.Get(ipnisync.CidSchemaHeader)
+		if reqType != "" {
+			logEntry = logEntry.WithField("reqType", reqType)
+		}
+
 		logEntry.Debugln("Publisher received request")
 
 		handler(rw, req)
