@@ -116,7 +116,7 @@ outer:
 
 		var clients []*server.Client
 		for _, node := range dbNodes {
-			client := server.NewClient(node.IPAddress, node.ServerPort, strings.Join(schedulerConfig.Fleets.Value(), ","))
+			client := server.NewClient(node.IPAddress, node.ServerPort, strings.Join(schedulerConfig.Fleets.Value(), ","), node.Region)
 
 			if err = client.Readiness(c.Context); err != nil {
 				log.WithField("nodeID", node.ID).WithError(err).Warnln("Node not ready")

@@ -19,13 +19,15 @@ type Client struct {
 	client      *http.Client
 	addr        string
 	schedulerID string
+	region      string
 }
 
-func NewClient(host string, port int16, schedulerID string) *Client {
+func NewClient(host string, port int16, schedulerID string, region string) *Client {
 	return &Client{
 		schedulerID: schedulerID,
 		addr:        fmt.Sprintf("%s:%d", host, port),
 		client:      http.DefaultClient,
+		region:      region,
 	}
 }
 
@@ -52,7 +54,7 @@ func (c *Client) Provide(ctx context.Context, content *util.Content) (*ProvideRe
 	}
 
 	endpoint := fmt.Sprintf("http://%s/provide", c.addr)
-	log.WithField("cid", content.CID.String()).Infoln("POST", endpoint)
+	log.WithField("cid", content.CID.String()).WithField("region", c.region).Infoln("POST", endpoint)
 	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("create retrieve request: %w", err)
@@ -83,7 +85,7 @@ func (c *Client) Provide(ctx context.Context, content *util.Content) (*ProvideRe
 func (c *Client) Readiness(ctx context.Context) error {
 	endpoint := fmt.Sprintf("http://%s/readiness", c.addr)
 
-	log.Infoln("GET", endpoint)
+	log.WithField("region", c.region).Infoln("GET", endpoint)
 	req, err := http.Get(endpoint)
 	if err != nil {
 		return fmt.Errorf("create retrieve request: %w", err)
@@ -112,7 +114,7 @@ func (c *Client) Retrieve(ctx context.Context, content cid.Cid) (*RetrievalRespo
 
 	endpoint := fmt.Sprintf("http://%s/retrieve/%s", c.addr, content.String())
 
-	log.Infoln("POST", endpoint)
+	log.WithField("region", c.region).Infoln("POST", endpoint)
 	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("create retrieve request: %w", err)
