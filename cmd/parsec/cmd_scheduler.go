@@ -87,6 +87,8 @@ func schedulerAction(c *cli.Context) error {
 
 outer:
 	for {
+		provNodeIdx += 1
+
 		// If context was canceled, stop here
 		select {
 		case <-throttle.C:
@@ -220,9 +222,6 @@ outer:
 		if err = errg.Wait(); err != nil {
 			return fmt.Errorf("waitgroup retrieve: %w", err)
 		}
-
-		provNodeIdx += 1
-		provNodeIdx %= len(dbNodes)
 
 		log.Infoln("Finished scheduling round. Starting next round soon.")
 	}
