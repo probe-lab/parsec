@@ -18,6 +18,7 @@ import (
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipni/go-libipni/apierror"
+	"github.com/ipni/go-libipni/dagsync/ipnisync"
 	"github.com/ipni/go-libipni/find/client"
 	"github.com/ipni/go-libipni/metadata"
 	provider "github.com/ipni/index-provider"
@@ -410,7 +411,7 @@ func (i *IPNIServer) httpHandler(handler http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		ts := time.Now()
 		ask := path.Base(req.URL.Path)
-		logEntry := log.WithField("ask", ask)
+		logEntry := log.WithField("ask", ask).WithField("reqType", req.Header.Get(ipnisync.CidSchemaHeader))
 		logEntry.Debugln("Publisher received request")
 
 		handler(rw, req)
