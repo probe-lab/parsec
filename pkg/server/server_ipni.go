@@ -244,6 +244,7 @@ func (i *IPNIServer) Provide(ctx context.Context, c cid.Cid) (pr *ProvideRespons
 			Duration: time.Since(start),
 			Error:    "notify engine: " + err.Error(),
 		})
+		log.WithError(err).Warnln("Failed to notify engine")
 		return pr, nil
 	}
 
@@ -328,6 +329,7 @@ loop:
 				Duration: time.Since(start),
 				Error:    fmtErr(ctx.Err()),
 			})
+			log.Infoln("Context canceled while probing CID availability.")
 			return pr, nil
 		case <-t.C:
 			t.Reset(i.conf.IndexerInterval)
@@ -348,6 +350,7 @@ loop:
 				Duration: time.Since(start),
 				Error:    fmt.Sprintf("get probe multihash %s: %s", i.conf.IndexerHost, err),
 			})
+			log.WithError(err).Warnln("Failed to get probe multihash")
 			return pr, nil
 
 		} else {
