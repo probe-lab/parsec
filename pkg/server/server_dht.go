@@ -123,7 +123,7 @@ func (d *DHTServer) Provide(ctx context.Context, cid cid.Cid) (*ProvideResponse,
 	err := d.DHT.Provide(timeoutCtx, cid, true)
 	duration := time.Since(start)
 
-	latencies.WithLabelValues("provide_duration", "dht", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
+	latencies.WithLabelValues("provide_duration", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
 	log.WithField("cid", cid.String()).Infoln("Done providing content...")
 
 	resp := &ProvideResponse{
@@ -168,7 +168,7 @@ func (d *DHTServer) Retrieve(ctx context.Context, cid cid.Cid) (*RetrievalRespon
 		RoutingTableSize: RoutingTableSize(d.DHT),
 	}
 
-	latencies.WithLabelValues("retrieval_ttfpr", "dht", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
+	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
 	return resp, nil
 }
 

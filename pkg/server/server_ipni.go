@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -164,7 +165,13 @@ func (i *IPNIServer) Provide(ctx context.Context, c cid.Cid) (pr *ProvideRespons
 			return
 		}
 		m := pr.Measurements[len(pr.Measurements)-1]
-		latencies.WithLabelValues("provide_duration", "ipni", strconv.FormatBool(m.Error == ""), ctx.Value(headerSchedulerID).(string)).Observe(m.Duration.Seconds())
+
+		// if it's a "too many requests" error, we don't want to record the latency
+		if strings.Contains(m.Error, "Too Many Requests") {
+			return
+		}
+
+		latencies.WithLabelValues("provide_duration", strconv.FormatBool(m.Error == ""), ctx.Value(headerSchedulerID).(string)).Observe(m.Duration.Seconds())
 	}()
 
 	// Generating multihash for probing after we have pushed out the advertisement.
@@ -389,7 +396,7 @@ func (i *IPNIServer) Retrieve(ctx context.Context, cid cid.Cid) (*RetrievalRespo
 		RoutingTableSize: 0,
 	}
 
-	latencies.WithLabelValues("retrieval_ttfpr", "ipni", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
+	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
 	return retResp, nil
 }
 
