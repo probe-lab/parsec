@@ -24,13 +24,6 @@ var latencies = prometheus.NewSummaryVec(
 	[]string{"type", "target", "success", "scheduler"},
 )
 
-var netSizeGauge = prometheus.NewGauge(
-	prometheus.GaugeOpts{
-		Name: "parsec_network_size",
-		Help: "The current network size estimate",
-	},
-)
-
 func init() {
 	prometheus.MustRegister(totalRequests)
 	prometheus.MustRegister(latencies)

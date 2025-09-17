@@ -264,28 +264,6 @@ func (h *Host) subscribeForEvents() error {
 	return nil
 }
 
-func (d *DHTServer) measureNetworkSize(ctx context.Context) {
-	idht, ok := d.DHT.(*kaddht.IpfsDHT)
-	if !ok {
-		return
-	}
-
-	t := time.NewTicker(time.Minute)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-		}
-
-		netSize, err := idht.NetworkSize()
-		if err != nil {
-			continue
-		}
-		netSizeGauge.Set(float64(netSize))
-	}
-}
-
 func (i *IPNIServer) gcMultihashEntries(ctx context.Context) {
 	t := time.NewTicker(time.Hour)
 	for {

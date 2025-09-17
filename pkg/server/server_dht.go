@@ -20,7 +20,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/multiformats/go-multiaddr"
 	mh "github.com/multiformats/go-multihash"
-	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/probe-lab/parsec/pkg/util"
@@ -107,10 +106,6 @@ func InitDHTServer(ctx context.Context, h *Host, ds datastore.Batching, conf *DH
 	if err = dht.Bootstrap(ctx); err != nil {
 		return nil, fmt.Errorf("bootstrap: %w", err)
 	}
-
-	prometheus.MustRegister(netSizeGauge)
-
-	go d.measureNetworkSize(ctx)
 
 	return d, nil
 }
