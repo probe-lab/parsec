@@ -196,6 +196,7 @@ func main() {
 		Commands: []*cli.Command{
 			SchedulerCommand,
 			ServerCommand,
+			HealthCommand,
 		},
 	}
 

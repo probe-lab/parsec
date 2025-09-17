@@ -97,8 +97,13 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 
 	go func() {
-		// Start by waiting three minutes until the node is ready.
-		time.Sleep(s.conf.StartupDelay)
+		// Start by waiting until the node is ready.
+		log.WithField("sleep", s.conf.StartupDelay).Infoln("Waiting for node to be ready...")
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(s.conf.StartupDelay):
+		}
 
 		if err := s.dbc.UpdateHeartbeat(ctx, s.dbNode); err != nil {
 			log.WithError(err).Warnln("Couldn't update heartbeat")

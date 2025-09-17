@@ -39,7 +39,7 @@ var serverConfig = struct {
 	Fleet:                    "",
 	LevelDB:                  "./leveldb",
 	FirehoseRegion:           "us-east-1",
-	StartupDelay:             3 * time.Minute,
+	StartupDelay:             time.Minute,
 	FirehoseBatchTime:        30 * time.Second,
 	FirehoseBatchSize:        500,
 	FirehoseConnectionEvents: true,
