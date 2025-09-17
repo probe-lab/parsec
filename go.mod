@@ -17,11 +17,11 @@ require (
 	github.com/ipfs/go-ds-leveldb v0.5.2
 	github.com/ipfs/go-ipfs-util v0.0.3
 	github.com/ipfs/go-log/v2 v2.8.1
-	github.com/ipni/go-libipni v0.6.18
+	github.com/ipni/go-libipni v0.7.0
 	github.com/ipni/index-provider v0.15.5
 	github.com/lib/pq v1.10.9
 	github.com/libp2p/go-libp2p v0.43.0
-	github.com/libp2p/go-libp2p-kad-dht v0.33.0
+	github.com/libp2p/go-libp2p-kad-dht v0.34.0
 	github.com/libp2p/go-libp2p-kbucket v0.8.0
 	github.com/multiformats/go-multiaddr v0.16.1
 	github.com/multiformats/go-multicodec v0.9.2
@@ -71,8 +71,8 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
-	github.com/ipfs/boxo v0.30.0 // indirect
-	github.com/ipld/go-car/v2 v2.14.3 // indirect
+	github.com/ipfs/boxo v0.34.0 // indirect
+	github.com/ipld/go-car/v2 v2.15.0 // indirect
 	github.com/ipld/go-ipld-adl-hamt v0.0.0-20250821073235-1979ffd425aa // indirect
 	github.com/ipld/go-ipld-prime v0.21.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
@@ -85,7 +85,7 @@ require (
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.4.1 // indirect
-	github.com/libp2p/go-libp2p-pubsub v0.14.3 // indirect
+	github.com/libp2p/go-libp2p-pubsub v0.15.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.3.1 // indirect
 	github.com/libp2p/go-libp2p-routing-helpers v0.7.5 // indirect
 	github.com/libp2p/go-libp2p-xor v0.1.0 // indirect
