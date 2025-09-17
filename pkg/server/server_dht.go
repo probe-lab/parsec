@@ -103,14 +103,6 @@ func InitDHTServer(ctx context.Context, h *Host, ds datastore.Batching, conf *DH
 	}
 	d.DHT = dht
 
-	go func() {
-		t := time.NewTicker(time.Second * 10)
-		for range t.C {
-			fmt.Println("connections", len(h.Host.Network().Conns()))
-			fmt.Println("routing table size", RoutingTableSize(d.DHT))
-		}
-	}()
-
 	log.Infoln("Bootstrapping DHT server")
 	if err = dht.Bootstrap(ctx); err != nil {
 		return nil, fmt.Errorf("bootstrap: %w", err)
