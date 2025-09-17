@@ -58,7 +58,6 @@ func InitHost(ctx context.Context, fhClient firehose.Submitter, conf *HostConfig
 		libp2p.ResourceManager(&network.NullResourceManager{}),
 		libp2p.ListenAddrStrings(addrs...),
 		libp2p.WithFxOption(fx.Populate(&id)),
-		libp2p.DisableMetrics(),
 		// TODO: remove
 		libp2p.AddrsFactory(func(maddrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
 			return append(maddrs, multiaddr.StringCast(fmt.Sprintf("/ip4/2.202.214.161/tcp/%d", conf.Port)))
