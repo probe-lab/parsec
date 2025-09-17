@@ -2,9 +2,15 @@ openapi: 3.0.3
 info:
   title: Parsec Server
   description: |
-    Parsec is tooling that measures the `PUT` and `GET` performance of the IPFS public DHT. The setup is split into
-    two components: the scheduler and the server. This document specifies the API contract that the server should
+    Parsec is tooling that measures the `PUT` and `GET` performance of the IPFS public DHT and IPNI (InterPlanetary Network Indexer).
+    The setup is split into two components: the scheduler and the server. This document specifies the API contract that the server should
     implement so that the scheduler can orchestrate any desired sequence of publication and retrieval steps.
+
+    The server can operate in two modes:
+    - **DHT mode**: Uses libp2p Kademlia DHT for publishing and retrieving provider records
+    - **IPNI mode**: Uses HTTP publisher to announce advertisements to IPNI indexers (e.g., cid.contact)
+
+    The mode is determined at server startup and affects the measurement process and response structure.
   version: 0.1.0
 servers:
   - url: 'http'
@@ -16,10 +22,15 @@ paths:
       summary: Publishes a provider record for the given content.
       description: |
         This endpoint accepts a binary blob, generates a CID from it,
-        and publishes the corresponding provider record. Upon completion
-        it returns the generated CID, the duration it took
-        to publish the provider record, any error that may have occurred,
-        and the number of peers in the routing table upon publication.
+        and publishes the corresponding provider record. The behavior depends on the server mode:
+
+        **DHT mode**: Publishes provider records to the Kademlia DHT network.
+        Returns measurements for the "provide" step.
+
+        **IPNI mode**: Announces an advertisement to the configured IPNI indexer.
+        Returns measurements for multiple steps: "announce", "index_ad", "index_entries", and "availability".
+        The process includes announcing the advertisement, waiting for the indexer to fetch it,
+        and polling for availability of the content in the index.
       parameters:
         - name: x-scheduler-id
           in: header
@@ -38,22 +49,13 @@ paths:
                 - Content
               properties:
                 Content:
-                  type: string
+                  type: array
+                  items:
+                    type: integer
+                    format: byte
                   description: |
-                    Binary data the server should use to generate a CID and publish a provider record for.
-                    The Go implementation generates 1024 bytes of random data and puts into this JSON field.
-                Target:
-                  type: string
-                  enum:
-                    - DHT
-                    - IPNI
-                  default: DHT
-                  description: |
-                    Specifies the provide target type. If set to DHT (default when property != IPNI) the server
-                    will write provider records to the DHT. If set to IPNI, the server announces an advertisement
-                    to an InterPlanetary Network Indexer. To which specifically is part of the servers configuration
-                    and the client must know how the server is configured to know the specific IPNI (e.g, whether
-                    it's cid.contact or another one)
+                    Binary data as a byte array that the server should use to generate a CID and publish a provider record for.
+                    The scheduler typically generates random bytes for each measurement.
       responses:
         '200':
           description: |
@@ -65,24 +67,75 @@ paths:
               schema:
                 required:
                   - CID
-                  - Duration
-                  - Error
+                  - Measurements
                   - RoutingTableSize
                 properties:
                   CID:
                     type: string
                     example: bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku
-                  Duration:
-                    type: integer
-                    description: The time it took to write all provider records in nanoseconds (default Go formatting of `time.Duration`). E.g., `1000000000` for 1s.
-                    example: 1000000000
-                  Error:
-                    type: string
-                    description: Just any text that indicates the error reason. If no error happened, pass an empty string.
+                  Measurements:
+                    type: array
+                    description: Array of measurements for different steps in the provide process. DHT mode typically has one "provide" step, while IPNI mode has multiple steps like "announce", "index_ad", "index_entries", and "availability".
+                    items:
+                      type: object
+                      required:
+                        - Step
+                        - Duration
+                        - Error
+                      properties:
+                        Step:
+                          type: string
+                          description: The specific step being measured (e.g., "provide", "announce", "index_ad", "index_entries", "availability")
+                          example: provide
+                        Duration:
+                          type: integer
+                          description: The time it took for this step in nanoseconds (default Go formatting of `time.Duration`). E.g., `1000000000` for 1s.
+                          example: 1000000000
+                        Error:
+                          type: string
+                          description: Any error that occurred during this step. Empty string if no error.
+                          example: ""
                   RoutingTableSize:
                     type: integer
-                    description: The number of peers in the routing table. Either right before or right after the publication. Doesn't really matter.
+                    description: The number of peers in the routing table. Either right before or right after the publication. For IPNI mode, this is always 0.
                     example: 202
+              examples:
+                dht_success:
+                  summary: Successful DHT provide operation
+                  value:
+                    CID: "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+                    Measurements:
+                      - Step: "provide"
+                        Duration: 1500000000
+                        Error: ""
+                    RoutingTableSize: 202
+                ipni_success:
+                  summary: Successful IPNI provide operation
+                  value:
+                    CID: "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+                    Measurements:
+                      - Step: "announce"
+                        Duration: 250000000
+                        Error: ""
+                      - Step: "index_ad"
+                        Duration: 2000000000
+                        Error: ""
+                      - Step: "index_entries"
+                        Duration: 3500000000
+                        Error: ""
+                      - Step: "availability"
+                        Duration: 15000000000
+                        Error: ""
+                    RoutingTableSize: 0
+                dht_error:
+                  summary: Failed DHT provide operation
+                  value:
+                    CID: "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+                    Measurements:
+                      - Step: "provide"
+                        Duration: 180000000000
+                        Error: "context deadline exceeded"
+                    RoutingTableSize: 45
         '400':
           description: E.g., the given JSON was malformed.
 
@@ -92,8 +145,12 @@ paths:
         - Content Routing
       summary: Looks up provider records for the given CID.
       description: |
-        This endpoint takes the CID from the path component, looks up provider records in the DHT,
-        and measures the time it took to find the first one.
+        This endpoint takes the CID from the path component and looks up provider records.
+        The behavior depends on the server mode:
+
+        **DHT mode**: Searches the Kademlia DHT network for provider records and measures the time to find the first one.
+
+        **IPNI mode**: Queries the configured IPNI indexer for provider information.
       parameters:
         - name: x-scheduler-id
           in: header
@@ -127,27 +184,66 @@ paths:
               schema:
                 required:
                   - CID
-                  - Duration
-                  - Error
+                  - Measurements
                   - RoutingTableSize
                 properties:
                   CID:
                     type: string
                     example: bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku
-                  Duration:
-                    type: integer
-                    description: The time it took to **find the first** provider records in nanoseconds (default Go formatting of `time.Duration`). E.g., `1000000000` for 1s.
-                    example: 1000000000
-                  Error:
-                    type: string
-                    description: |
-                      Just any text that indicates the error reason. If no error happened, pass an empty string.
-                      If the lookup algorithm couldn't find a provider record but didn't really encounter
-                      an error, this field should be mapped to the value `not found`.
+                  Measurements:
+                    type: array
+                    description: Array of measurements for the retrieval process. Typically contains one "retrieval" step.
+                    items:
+                      type: object
+                      required:
+                        - Duration
+                        - Error
+                      properties:
+                        Step:
+                          type: string
+                          description: The specific step being measured (typically "retrieval")
+                          example: retrieval
+                        Duration:
+                          type: integer
+                          description: The time it took to **find the first** provider records in nanoseconds (default Go formatting of `time.Duration`). E.g., `1000000000` for 1s.
+                          example: 1000000000
+                        Error:
+                          type: string
+                          description: |
+                            Just any text that indicates the error reason. If no error happened, pass an empty string.
+                            If the lookup algorithm couldn't find a provider record but didn't really encounter
+                            an error, this field should be mapped to the value `not found`.
+                          example: ""
                   RoutingTableSize:
                     type: integer
-                    description: The number of peers in the routing table. Either right before or right after the publication. Doesn't really matter.
+                    description: The number of peers in the routing table. Either right before or right after the publication. For IPNI mode, this is typically 0.
                     example: 202
+              examples:
+                dht_success:
+                  summary: Successful DHT retrieval
+                  value:
+                    CID: "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+                    Measurements:
+                      - Duration: 750000000
+                        Error: ""
+                    RoutingTableSize: 198
+                dht_not_found:
+                  summary: DHT retrieval - provider not found
+                  value:
+                    CID: "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+                    Measurements:
+                      - Duration: 5000000000
+                        Error: "not found"
+                    RoutingTableSize: 201
+                ipni_success:
+                  summary: Successful IPNI retrieval
+                  value:
+                    CID: "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+                    Measurements:
+                      - Step: "retrieval"
+                        Duration: 320000000
+                        Error: ""
+                    RoutingTableSize: 0
         '400':
           description: E.g., the JSON is malformed or we couldn't parse the given CID.
 
