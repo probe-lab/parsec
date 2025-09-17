@@ -74,6 +74,7 @@ func InitDHTServer(ctx context.Context, h *Host, ds datastore.Batching, conf *DH
 		log.Infoln("Using full accelerated DHT strategy")
 		opts := []kaddht.Option{
 			kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
+			kaddht.BucketSize(20),
 			kaddht.Mode(mode),
 			kaddht.Datastore(ds),
 		}
