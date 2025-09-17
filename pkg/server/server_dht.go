@@ -177,7 +177,7 @@ func (d *DHTServer) Retrieve(ctx context.Context, cid cid.Cid) (*RetrievalRespon
 }
 
 func (d *DHTServer) Readiness() bool {
-	return true
+	return RoutingTableSize(d.DHT) > 0
 }
 
 func (d *DHTServer) handlerWrapper(ctx context.Context, s network.Stream, req *pb.Message) {
