@@ -124,7 +124,11 @@ func (d *DHTServer) Provide(ctx context.Context, cid cid.Cid) (*ProvideResponse,
 	duration := time.Since(start)
 
 	latencies.WithLabelValues("provide_duration", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
-	log.WithField("cid", cid.String()).Infoln("Done providing content...")
+	logEntry := log.WithField("dur", duration.Seconds()).WithField("cid", cid.String())
+	if err != nil {
+		logEntry = logEntry.WithError(err)
+	}
+	logEntry.Infoln("Done providing content...")
 
 	resp := &ProvideResponse{
 		CID: cid.String(),
