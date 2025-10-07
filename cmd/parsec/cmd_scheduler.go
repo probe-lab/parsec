@@ -85,7 +85,6 @@ func schedulerAction(c *cli.Context) error {
 	throttle := time.NewTimer(0)
 	provNodeIdx := 0
 
-outer:
 	for {
 		provNodeIdx += 1
 
@@ -162,11 +161,6 @@ outer:
 			}
 
 			nonNilErrs += 1
-
-			if strings.Contains(measurement.Error, "Too Many Requests") {
-				log.WithField("nodeID", providerNode.ID).Warnln("Failed to provide record due to too many requests. Trying again in a bit...")
-				continue outer
-			}
 		}
 
 		for _, measurement := range provide.Measurements {
@@ -183,6 +177,7 @@ outer:
 					break
 				}
 			}
+
 			log.WithField("err", err).Infoln("Failed to provide content")
 			continue
 		}
