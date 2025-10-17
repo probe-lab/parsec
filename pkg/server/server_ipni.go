@@ -264,6 +264,8 @@ func (i *IPNIServer) Provide(ctx context.Context, c cid.Cid) (pr *ProvideRespons
 
 	logEntry.WithField("adCID", adCid.String()).WithField("entriesCID", ad.Entries.String()).Infoln("Waiting for indexer to reach out")
 	adIndexed := false
+
+	indexerIndexTimeout := time.After(i.conf.IndexerIndexTimeout)
 loop:
 	for {
 		select {
@@ -280,10 +282,9 @@ loop:
 				Error:    fmtErr(ctx.Err()),
 			})
 			return pr, nil
-		case <-time.After(i.conf.IndexerIndexTimeout):
+		case <-indexerIndexTimeout:
 			logEntry.Infoln("Indexer did not reach out/complete the sync with us.")
 			unsubscribe()
-
 			step := "index_ad"
 			if adIndexed {
 				step = "index_entries"
