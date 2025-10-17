@@ -239,6 +239,7 @@ func (i *IPNIServer) Provide(ctx context.Context, c cid.Cid) (pr *ProvideRespons
 
 	logEntry.Infoln("Notify Engine")
 	start := time.Now()
+
 	adCid, err := i.engine.NotifyPut(ctx, prov, contextID, metadata.Default.New(metadata.Bitswap{}))
 	if err != nil {
 		unsubscribe()
@@ -250,6 +251,11 @@ func (i *IPNIServer) Provide(ctx context.Context, c cid.Cid) (pr *ProvideRespons
 		log.WithError(err).Warnln("Failed to notify engine")
 		return pr, nil
 	}
+	defer func() {
+		if _, err = i.engine.NotifyRemove(ctx, prov.ID, contextID); err != nil {
+			logEntry.WithError(err).Warnln("Failed to notify IPNI about removal")
+		}
+	}()
 
 	pr.Measurements = append(pr.Measurements, &Measurement{
 		Step:     "announce",
