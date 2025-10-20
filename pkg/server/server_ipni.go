@@ -324,8 +324,8 @@ loop:
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, i.conf.IndexerAvailabilityTimeout)
-	defer cancel()
+	availCtx, availCancel := context.WithTimeout(ctx, i.conf.IndexerAvailabilityTimeout)
+	defer availCancel()
 
 	t := time.NewTimer(0)
 
@@ -333,11 +333,11 @@ loop:
 	for {
 		logEntry.Infof("Pausing for %s\n", i.conf.IndexerInterval)
 		select {
-		case <-ctx.Done():
+		case <-availCtx.Done():
 			pr.Measurements = append(pr.Measurements, &Measurement{
 				Step:     "availability",
 				Duration: time.Since(start),
-				Error:    fmtErr(ctx.Err()),
+				Error:    fmtErr(availCtx.Err()),
 			})
 			log.Infoln("Context canceled while probing CID availability.")
 			return pr, nil
@@ -347,7 +347,7 @@ loop:
 
 		logEntry.WithField("probeIdx", probeIdx).Infoln("Getting probe Multihash")
 
-		ipniResp, err := i.client.Find(ctx, probes[probeIdx])
+		ipniResp, err := i.client.Find(availCtx, probes[probeIdx])
 		// update probe index for new round
 		probeIdx = (probeIdx + 1) % probeCount
 
@@ -362,7 +362,6 @@ loop:
 			})
 			log.WithError(err).Warnln("Failed to get probe multihash")
 			return pr, nil
-
 		} else {
 			for _, mhRes := range ipniResp.MultihashResults {
 				for _, pRes := range mhRes.ProviderResults {
