@@ -293,9 +293,14 @@ func (i *IPNIServer) gcMultihashEntries(ctx context.Context) {
 
 		i.multihashesLk.Lock()
 		for contextID, entry := range i.multihashes {
-			if entry.ts.After(time.Now().Add(-time.Hour)) {
+			if time.Since(entry.ts) < time.Hour {
 				continue
 			}
+
+			if _, err := i.engine.NotifyRemove(ctx, i.host.ID(), []byte(contextID)); err != nil {
+				log.WithError(err).Warnln("Failed to notify IPNI about removal")
+			}
+
 			delete(i.multihashes, contextID)
 		}
 		i.multihashesLk.Unlock()

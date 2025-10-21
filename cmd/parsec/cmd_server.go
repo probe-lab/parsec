@@ -250,7 +250,10 @@ func serverAction(c *cli.Context, initServerFunc serverInitFunc) error {
 	<-c.Context.Done()
 
 	log.Infoln("Shutting server down")
-	return n.Shutdown(context.Background())
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+	return n.Shutdown(shutdownCtx)
 }
 
 func fhConfig() *firehose.Config {

@@ -135,9 +135,6 @@ func InitIPNIServer(ctx context.Context, h *Host, ds datastore.Batching, conf *I
 }
 
 func (i *IPNIServer) Shutdown(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
 	if err := i.srv.Shutdown(ctx); err != nil {
 		log.WithError(err).WithField("indexer", i.conf.IndexerHost).Warnln("Failed to shut down publisher HTTP server")
 	}
@@ -145,6 +142,16 @@ func (i *IPNIServer) Shutdown(ctx context.Context) error {
 	if err := i.engine.Shutdown(); err != nil {
 		log.WithError(err).WithField("indexer", i.conf.IndexerHost).Warnln("Failed to shut down indexer engine")
 	}
+
+	i.multihashesLk.Lock()
+	for contextID := range i.multihashes {
+		log.Infoln("Removing advertisement for ctxID " + string(contextID))
+		if _, err := i.engine.NotifyRemove(ctx, i.host.ID(), []byte(contextID)); err != nil {
+			log.WithError(err).Warnln("Failed to notify IPNI about removal")
+		}
+		delete(i.multihashes, contextID)
+	}
+	i.multihashesLk.Unlock()
 
 	return i.host.Close()
 }
@@ -251,11 +258,6 @@ func (i *IPNIServer) Provide(ctx context.Context, c cid.Cid) (pr *ProvideRespons
 		log.WithError(err).Warnln("Failed to notify engine")
 		return pr, nil
 	}
-	defer func() {
-		if _, err = i.engine.NotifyRemove(ctx, prov.ID, contextID); err != nil {
-			logEntry.WithError(err).Warnln("Failed to notify IPNI about removal")
-		}
-	}()
 
 	pr.Measurements = append(pr.Measurements, &Measurement{
 		Step:     "announce",
@@ -345,9 +347,9 @@ loop:
 			t.Reset(i.conf.IndexerInterval)
 		}
 
-		logEntry.WithField("probeIdx", probeIdx).Infoln("Getting probe Multihash")
-
-		ipniResp, err := i.client.Find(availCtx, probes[probeIdx])
+		probeMultihash := probes[probeIdx]
+		logEntry.WithField("probeIdx", probeIdx).WithField("multihash", probeMultihash.B58String()).Infoln("Getting probe Multihash")
+		ipniResp, err := i.client.Find(availCtx, probeMultihash)
 		// update probe index for new round
 		probeIdx = (probeIdx + 1) % probeCount
 
