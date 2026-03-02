@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -103,7 +105,10 @@ func InitHost(ctx context.Context, fhClient firehose.Submitter, conf *HostConfig
 	log.WithField("localID", h.ID()).Info("Initialized new libp2p host")
 
 	if err = h.waitForPublicIPv4Address(ctx); err != nil {
-		return nil, fmt.Errorf("wait for public IPv4 address: %w", err)
+		log.WithError(err).Warnln("Libp2p could not get public IPv4 address")
+		if err := h.getPublicIP(ctx); err != nil {
+			return nil, fmt.Errorf("get public IP: %w", err)
+		}
 	}
 
 	if err = h.subscribeForEvents(); err != nil {
@@ -353,4 +358,29 @@ func fmtMultihash(m mh.Multihash) string {
 		return str[:16]
 	}
 	return str
+}
+
+func (h *Host) getPublicIP(ctx context.Context) error {
+	log.Infoln("Fetching public IP from AWS checkip service...")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://checkip.amazonaws.com", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create external IP request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to fetch public IP: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	ip := strings.TrimSpace(string(body))
+	log.Infoln("Public IP is", ip)
+	h.publicIP.Store(ip)
+
+	return nil
 }
