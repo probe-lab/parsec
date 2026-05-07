@@ -401,16 +401,14 @@ func (i *IPNIServer) Retrieve(ctx context.Context, cid cid.Cid) (*RetrievalRespo
 		// only read first response (don't loop)
 		if providers.Next() {
 			val := providers.Val()
-			_, ok := val.Val.(*types.PeerRecord)
-			if !ok {
-				err = fmt.Errorf("unexpected type %T", val.Val)
-			} else {
+			if val.Err != nil {
 				err = val.Err
+			} else if _, ok := val.Val.(*types.PeerRecord); !ok {
+				err = fmt.Errorf("unexpected type %T", val.Val)
 			}
 		} else {
 			err = fmt.Errorf("not found")
 		}
-	}
 
 	duration := time.Since(start) // measure when first response or error was received
 
