@@ -15,12 +15,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	delrout "github.com/ipfs/boxo/routing/http/client" // delegated routing client
+	"github.com/ipfs/boxo/routing/http/types"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipni/go-libipni/apierror"
 	"github.com/ipni/go-libipni/dagsync/ipnisync"
-	"github.com/ipni/go-libipni/find/client"
+	libipni "github.com/ipni/go-libipni/find/client"
 	"github.com/ipni/go-libipni/metadata"
 	provider "github.com/ipni/index-provider"
 	"github.com/ipni/index-provider/engine"
@@ -49,7 +51,8 @@ type IPNIServer struct {
 	host host.Host
 	conf *IPNIServerConfig
 
-	client *client.Client
+	delrc  *delrout.Client
+	ipnic  *libipni.Client
 	engine *engine.Engine
 	srv    *http.Server
 
@@ -92,9 +95,14 @@ func InitIPNIServer(ctx context.Context, h *Host, ds datastore.Batching, conf *I
 		return nil, fmt.Errorf("new provider engine: %w", err)
 	}
 
-	c, err := client.New("https://" + conf.IndexerHost)
+	ipnic, err := libipni.New("https://" + conf.IndexerHost)
 	if err != nil {
 		return nil, fmt.Errorf("new indexer client for %s: %w", conf.IndexerHost, err)
+	}
+
+	delrc, err := delrout.New("https://"+conf.IndexerHost, delrout.WithUserAgent("parsec"), delrout.WithStreamResultsRequired())
+	if err != nil {
+		return nil, fmt.Errorf("delegated routing client for %s: %w", conf.IndexerHost, err)
 	}
 
 	if err = eng.Start(ctx); err != nil {
@@ -109,7 +117,8 @@ func InitIPNIServer(ctx context.Context, h *Host, ds datastore.Batching, conf *I
 	i := &IPNIServer{
 		host:        h,
 		conf:        conf,
-		client:      c,
+		ipnic:       ipnic,
+		delrc:       delrc,
 		engine:      eng,
 		subs:        map[string]chan ipniRequest{},
 		multihashes: map[string]multiHashEntry{},
@@ -349,7 +358,7 @@ loop:
 
 		probeMultihash := probes[probeIdx]
 		logEntry.WithField("probeIdx", probeIdx).WithField("multihash", probeMultihash.B58String()).Infoln("Getting probe Multihash")
-		ipniResp, err := i.client.Find(availCtx, probeMultihash)
+		ipniResp, err := i.ipnic.Find(availCtx, probeMultihash)
 		// update probe index for new round
 		probeIdx = (probeIdx + 1) % probeCount
 
@@ -385,19 +394,32 @@ loop:
 
 func (i *IPNIServer) Retrieve(ctx context.Context, cid cid.Cid) (*RetrievalResponse, error) {
 	start := time.Now()
-	ipniResp, err := i.client.Find(ctx, cid.Hash())
+	providers, err := i.delrc.FindProviders(ctx, cid)
+	if err == nil {
+		defer providers.Close()
 
-	var duration time.Duration
-	if err == nil && len(ipniResp.MultihashResults) == 0 {
-		err = fmt.Errorf("not found")
+		// only read first response (don't loop)
+		if providers.Next() {
+			val := providers.Val()
+			_, ok := val.Val.(*types.PeerRecord)
+			if !ok {
+				err = fmt.Errorf("unexpected type %T", val.Val)
+			} else {
+				err = val.Err
+			}
+		} else {
+			err = fmt.Errorf("not found")
+		}
 	}
+
+	duration := time.Since(start) // measure when first response or error was received
 
 	retResp := &RetrievalResponse{
 		CID: cid.String(),
 		Measurements: []*Measurement{
 			{
 				Step:     "retrieval",
-				Duration: time.Since(start),
+				Duration: duration,
 				Error:    fmtErr(err),
 			},
 		},
