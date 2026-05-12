@@ -74,14 +74,14 @@ func NewClient(ctx context.Context, conf *Config) (Submitter, error) {
 
 func initStream(region, stream string) (*firehose.Firehose, error) {
 	awsSession, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
+		Region: new(region),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("new aws session: %w", err)
 	}
 	fh := firehose.New(awsSession)
 
-	streamName := aws.String(stream)
+	streamName := new(stream)
 
 	log.Infoln("Checking firehose stream permissions")
 	_, err = fh.DescribeDeliveryStream(&firehose.DescribeDeliveryStreamInput{
@@ -136,7 +136,7 @@ func (c *Client) flush() {
 	}
 
 	_, err := c.fh.PutRecordBatch(&firehose.PutRecordBatchInput{
-		DeliveryStreamName: aws.String(c.conf.Stream),
+		DeliveryStreamName: new(c.conf.Stream),
 		Records:            putRecords,
 	})
 	if err != nil {
