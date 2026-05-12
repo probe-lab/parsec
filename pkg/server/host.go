@@ -26,11 +26,11 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/multiformats/go-multicodec"
 	mh "github.com/multiformats/go-multihash"
+	"github.com/probe-lab/parsec/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 
 	"github.com/probe-lab/parsec/pkg/firehose"
-	"github.com/probe-lab/parsec/pkg/util"
 )
 
 const ipfsProtocolPrefix = "/ipfs"
@@ -38,6 +38,7 @@ const ipfsProtocolPrefix = "/ipfs"
 type HostConfig struct {
 	Host                     string
 	Port                     int
+	Bootstrappers            []peer.AddrInfo
 	FirehoseConnectionEvents bool
 }
 
@@ -61,6 +62,7 @@ func InitHost(ctx context.Context, fhClient firehose.Submitter, conf *HostConfig
 	libp2pHost, err := libp2p.New(
 		libp2p.ResourceManager(&network.NullResourceManager{}),
 		libp2p.ListenAddrStrings(addrs...),
+		libp2p.EnableAutoNATv2(),
 		libp2p.WithFxOption(fx.Populate(&id)),
 		libp2p.AddrsFactory(func(maddrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
 			// In the case of IPNI, we don't add the DHT routing subsystem. This
@@ -94,8 +96,15 @@ func InitHost(ctx context.Context, fhClient firehose.Submitter, conf *HostConfig
 		libp2pHost.Network().Notify(h)
 	}
 
+	var bootstrappers []peer.AddrInfo
+	if len(conf.Bootstrappers) != 0 {
+		bootstrappers = conf.Bootstrappers
+	} else {
+		bootstrappers = kaddht.GetDefaultBootstrapPeerAddrInfos()
+	}
+
 	log.Infoln("Connecting to bootstrap peers...")
-	for _, bp := range kaddht.GetDefaultBootstrapPeerAddrInfos() {
+	for _, bp := range bootstrappers {
 		log.WithField("peerID", util.FmtPeerID(bp.ID)).Infoln("Connecting...")
 		if err = h.Connect(ctx, bp); err != nil {
 			log.WithError(err).WithField("peerID", util.FmtPeerID(bp.ID)).Warnln("Could not connect to bootstrap peer")

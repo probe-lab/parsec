@@ -17,6 +17,7 @@ import (
 	pb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/multiformats/go-multiaddr"
 	mh "github.com/multiformats/go-multihash"
@@ -30,8 +31,11 @@ type DHTServerConfig struct {
 	DeniedCIDs        string
 	FirehoseRPCEvents bool
 	ServerMode        bool
+	Alpha             int
 	FullRT            bool
 	OptProv           bool
+	Bootstrappers     []peer.AddrInfo
+	Protocol          protocol.ID
 }
 
 type DHTServer struct {
@@ -69,14 +73,18 @@ func InitDHTServer(ctx context.Context, h *Host, ds datastore.Batching, conf *DH
 		mode = kaddht.ModeServer
 	}
 
+	log.Infoln("Protocol Override:", conf.Protocol)
+
 	var dht routing.Routing
 	if conf.FullRT {
 		log.Infoln("Using full accelerated DHT strategy")
 		opts := []kaddht.Option{
-			kaddht.BootstrapPeers(kaddht.GetDefaultBootstrapPeerAddrInfos()...),
+			kaddht.BootstrapPeers(conf.Bootstrappers...),
 			kaddht.BucketSize(20),
 			kaddht.Mode(mode),
 			kaddht.Datastore(ds),
+			kaddht.V1ProtocolOverride(protocol.ID(conf.Protocol)),
+			kaddht.Concurrency(conf.Alpha),
 		}
 		if conf.FirehoseRPCEvents {
 			opts = append(opts, kaddht.OnRequestHook(d.handlerWrapper))
@@ -86,8 +94,11 @@ func InitDHTServer(ctx context.Context, h *Host, ds datastore.Batching, conf *DH
 	} else {
 		log.Infoln("Using default DHT strategy")
 		opts := []kaddht.Option{
+			kaddht.BootstrapPeers(conf.Bootstrappers...),
 			kaddht.Mode(mode),
 			kaddht.Datastore(ds),
+			kaddht.Concurrency(conf.Alpha),
+			kaddht.V1ProtocolOverride(protocol.ID(conf.Protocol)),
 			kaddht.OnRequestHook(d.handlerWrapper),
 		}
 		if conf.OptProv {

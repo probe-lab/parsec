@@ -182,9 +182,12 @@ func serverAction(c *cli.Context, initServerFunc serverInitFunc) error {
 		return fmt.Errorf("new firehose client: %w", err)
 	}
 
+	bootstrappers, _, _ := bootstrapConfig(serverDHTConfig.Project, serverDHTConfig.Network)
+
 	hostConfig := &server.HostConfig{
 		Host:                     serverConfig.PeerHost,
 		Port:                     serverConfig.PeerPort,
+		Bootstrappers:            bootstrappers,
 		FirehoseConnectionEvents: serverConfig.FirehoseConnectionEvents,
 	}
 	h, err := server.InitHost(c.Context, fhClient, hostConfig)
