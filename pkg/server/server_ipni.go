@@ -409,6 +409,7 @@ func (i *IPNIServer) Retrieve(ctx context.Context, cid cid.Cid) (*RetrievalRespo
 		} else {
 			err = fmt.Errorf("not found")
 		}
+	}
 
 	duration := time.Since(start) // measure when first response or error was received
 
