@@ -5,7 +5,7 @@ GIT_SHA := `git rev-parse --short HEAD`
 GIT_TAG := GIT_SHA + GIT_DIRTY
 VERSION := `cat version`
 
-# Default recipe - show available commands
+# List the recipes
 default:
     @just --list
 
@@ -18,17 +18,28 @@ docker-push: docker
     docker push "{{REPO_SERVER}}/probelab:parsec-{{GIT_TAG}}"
     docker rmi "{{REPO_SERVER}}/probelab:parsec-{{GIT_TAG}}"
 
-# Run tests
-test:
-    go test ./...
+# Run the tests
+test *args:
+    go test ./... {{ args }}
 
 # Build the binary
 build:
     go build -ldflags "-X main.RawVersion={{VERSION}} -X main.ShortCommit={{GIT_TAG}}" -o dist/parsec github.com/probe-lab/parsec/cmd/parsec
 
-# Format code
+# Check formatting, go fix, vet, and staticcheck without changing files
+lint:
+    @test -z "$(gofumpt -l .)" || { echo "not formatted, run just format:"; gofumpt -l .; exit 1; }
+    go fix -diff ./...
+    go vet ./...
+    staticcheck ./...
+
+# Format the code and apply go fix in place
 format:
-    gofumpt -w -l .
+    gofumpt -w .
+    go fix ./...
+
+# Run everything CI runs
+ci: lint build test
 
 # Clean build artifacts
 clean:
