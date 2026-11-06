@@ -42,7 +42,7 @@ func (s *Server) provide(rw http.ResponseWriter, req *http.Request) {
 
 	log.WithField("cid", content.CID.String()).Infoln("Start providing content...")
 
-	ctx := context.WithValue(req.Context(), headerSchedulerID, req.Header.Get(headerSchedulerID))
+	ctx := context.WithValue(req.Context(), schedulerIDKey, req.Header.Get(headerSchedulerID))
 	resp, err := s.serverImpl.Provide(ctx, content.CID)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -66,7 +66,7 @@ func (s *Server) provide(rw http.ResponseWriter, req *http.Request) {
 type RetrieveRequest struct{}
 
 func (s *Server) retrieve(rw http.ResponseWriter, req *http.Request) {
-	ctx := context.WithValue(req.Context(), headerSchedulerID, req.Header.Get(headerSchedulerID))
+	ctx := context.WithValue(req.Context(), schedulerIDKey, req.Header.Get(headerSchedulerID))
 	var rr RetrieveRequest
 	data, err := io.ReadAll(req.Body)
 	if err != nil {
