@@ -206,7 +206,7 @@ func (i *IPNIServer) Provide(ctx context.Context, c cid.Cid) (pr *ProvideRespons
 	logEntry.Infoln("  Probes:", probeCount)
 
 	// The contextID just needs to be unique per multihash
-	contextID := []byte(fmt.Sprintf("parsec-%d", rand.Uint64()))
+	contextID := fmt.Appendf(nil, "parsec-%d", rand.Uint64())
 	logEntry.Infoln("  CtxID:", base64.StdEncoding.EncodeToString(contextID))
 	logEntry = logEntry.WithField("ctxID", fmtContextID(contextID))
 
