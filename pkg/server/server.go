@@ -26,6 +26,12 @@ type IServer interface {
 
 const headerSchedulerID = "x-scheduler-id"
 
+// ctxKey is the type of context keys set by this package.
+type ctxKey string
+
+// schedulerIDKey holds the scheduler ID in a request context.
+const schedulerIDKey ctxKey = headerSchedulerID
+
 type Config struct {
 	Host         string
 	Port         int

@@ -187,7 +187,7 @@ func (i *IPNIServer) Provide(ctx context.Context, c cid.Cid) (pr *ProvideRespons
 			return
 		}
 
-		latencies.WithLabelValues("provide_duration", strconv.FormatBool(m.Error == ""), ctx.Value(headerSchedulerID).(string)).Observe(m.Duration.Seconds())
+		latencies.WithLabelValues("provide_duration", strconv.FormatBool(m.Error == ""), ctx.Value(schedulerIDKey).(string)).Observe(m.Duration.Seconds())
 	}()
 
 	// Generating multihash for probing after we have pushed out the advertisement.
@@ -425,7 +425,7 @@ func (i *IPNIServer) Retrieve(ctx context.Context, cid cid.Cid) (*RetrievalRespo
 		RoutingTableSize: 0,
 	}
 
-	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
+	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(err == nil), ctx.Value(schedulerIDKey).(string)).Observe(duration.Seconds())
 	return retResp, nil
 }
 

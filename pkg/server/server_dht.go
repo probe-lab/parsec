@@ -134,7 +134,7 @@ func (d *DHTServer) Provide(ctx context.Context, cid cid.Cid) (*ProvideResponse,
 	err := d.DHT.Provide(timeoutCtx, cid, true)
 	duration := time.Since(start)
 
-	latencies.WithLabelValues("provide_duration", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
+	latencies.WithLabelValues("provide_duration", strconv.FormatBool(err == nil), ctx.Value(schedulerIDKey).(string)).Observe(duration.Seconds())
 	logEntry := log.WithField("dur", duration.Seconds()).WithField("cid", cid.String())
 	if err != nil {
 		logEntry = logEntry.WithError(err)
@@ -183,7 +183,7 @@ func (d *DHTServer) Retrieve(ctx context.Context, cid cid.Cid) (*RetrievalRespon
 		RoutingTableSize: RoutingTableSize(d.DHT),
 	}
 
-	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(err == nil), ctx.Value(headerSchedulerID).(string)).Observe(duration.Seconds())
+	latencies.WithLabelValues("retrieval_ttfpr", strconv.FormatBool(err == nil), ctx.Value(schedulerIDKey).(string)).Observe(duration.Seconds())
 	return resp, nil
 }
 
