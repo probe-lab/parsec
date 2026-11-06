@@ -44,7 +44,6 @@ type HostConfig struct {
 
 type Host struct {
 	host.Host
-	conf      *HostConfig
 	fhClient  firehose.Submitter
 	idService identify.IDService
 
@@ -355,14 +354,6 @@ func genProbes(start mh.Multihash, count int) ([]mh.Multihash, error) {
 
 func fmtContextID(contextID []byte) string {
 	str := base64.StdEncoding.EncodeToString(contextID)
-	if len(str) >= 16 {
-		return str[:16]
-	}
-	return str
-}
-
-func fmtMultihash(m mh.Multihash) string {
-	str := m.B58String()
 	if len(str) >= 16 {
 		return str[:16]
 	}
