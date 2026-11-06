@@ -2,182 +2,42 @@
 
 ProbeLab repository. Follow the `probelab` skill: it holds the company rules. Load it before you start any task here.
 
-## Project Overview
+`parsec` measures `PUT` and `GET` performance of the IPFS Amino DHT, other libp2p-kad-dht networks, and IPNI. A **server** is a libp2p peer with an HTTP API (`server.yaml`, OpenAPI 3.0). A **scheduler** tells one server to publish content and the others to retrieve it, then stores the timings in PostgreSQL. A **fleet** is a group of servers with one configuration: `default`, `fullrt`, `optprov`, `cid.contact`.
 
-`parsec` is a DHT lookup performance measurement tool that measures `PUT` and `GET` performance of the IPFS Amino DHT and other libp2p-kad-dht networks. The system consists of two main components:
+## Layout
 
-- **Server**: A libp2p peer that participates in the DHT and exposes an HTTP API for publication/retrieval operations
-- **Scheduler**: Orchestrates measurement experiments by instructing servers to publish content and retrieve it
+- `cmd/parsec/` — CLI: `cmd.go` (global flags), `cmd_server*.go` (`server dht`, `server ipni`), `cmd_scheduler.go`, `metrics.go`
+- `pkg/server/` — HTTP API (`/provide`, `/retrieve/{cid}`, `/readiness`), libp2p host, DHT and IPNI measurements, metrics
+- `pkg/db/` — PostgreSQL client and migrations (`pkg/db/migrations/`)
+- `pkg/models/` — SQLBoiler output; never edit by hand, run `just models` (config in `sqlboiler.toml`)
+- `pkg/config/` — ECS metadata handling
+- `pkg/firehose/` — AWS Kinesis Firehose submitter for telemetry events
+- `pkg/util/` — content generation and formatting
+- `js-libp2p/` — separate JavaScript server implementation with its own Dockerfile
+- `server.yaml` — OpenAPI spec of the server API
 
-The system supports multiple "fleets" (groups of servers with different configurations) for comparative analysis.
+## Commands
 
-## Development Commands
+- `just build`, `just test`, `just lint`, `just format`, `just ci` (the checks CI runs)
+- `just tools` installs `migrate` and `sqlboiler`; `just database` starts PostgreSQL in Docker
+- `just db-reset` runs migrations down and up, then regenerates models; `just migrate-up`, `just migrate-down`, `just models`
+- `just docker` builds the image; `just docker-push` pushes it to ECR
+- `docker compose up` starts two servers, a scheduler and PostgreSQL
+- Run locally: `go run ./cmd/parsec server dht --fleet=local` and `go run ./cmd/parsec scheduler --fleets=local`
+- Integration tests need a database. Most packages have no tests yet.
 
-### Building and Testing
-```bash
-# Build the binary
-just build
+## Conventions
 
-# Run tests
-just test
+- Configuration comes from flags and `PARSEC_*` environment variables; `.env.example` lists all of them.
+- Changing the schema: add a migration in `pkg/db/migrations/`, then run `just models`.
+- Metrics use the Prometheus client directly, not go-commons telemetry. They are served on `PARSEC_TELEMETRY_HOST:PORT` (default `localhost:6666`).
+- `staticcheck.conf` disables checks for known existing findings. Remove an entry when you fix its finding.
+- The `server` commands write to `nodes_ecs`, `provides_ecs`, `retrievals_ecs`; the scheduler writes `schedulers_ecs`. Other implementations of the server API must follow the table contract in the README.
 
-# Format code
-just format
+## Related repositories
 
-# Clean build artifacts
-just clean
-```
+- `probelab-infra` — Terraform for the ECS deployment (`tf/modules/parsec_server`, `tf/modules/parsec_scheduler`, `tf/parsec_*.tf`) and the parsec database (`db/cmi_parsec.sql`)
 
-### Database Operations
-```bash
-# Start local PostgreSQL database
-just database
+## Owner
 
-# Install required tools (migrate, sqlboiler)
-just tools
-
-# Reset database (down + up + regenerate models)
-just db-reset
-
-# Run migrations
-just migrate-up
-just migrate-down
-
-# Generate database models from schema
-just models
-```
-
-### Docker Operations
-```bash
-# Build Docker image
-just docker
-
-# Build and push to registry
-just docker-push
-
-# Run complete stack (2 servers + scheduler + postgres)
-docker compose up
-```
-
-## Architecture
-
-### Core Components
-
-1. **cmd/parsec/**: CLI entry points
-   - `cmd.go`: Main CLI application with global flags
-   - `cmd_server.go`: Server command implementation
-   - `cmd_scheduler.go`: Scheduler command implementation
-
-2. **pkg/server/**: HTTP server implementing the parsec API
-   - Handles `/provide` and `/retrieve/{cid}` endpoints per `server.yaml` spec
-   - Manages libp2p DHT interactions and timing measurements
-   - Reports results to PostgreSQL database
-
-3. **pkg/dht/**: libp2p DHT abstraction layer
-   - Host setup and configuration
-   - DHT vs IPNI routing implementations
-   - Performance metrics collection
-
-4. **pkg/db/**: Database client and models
-   - PostgreSQL connection management
-   - SQLBoiler-generated models in `pkg/models/`
-   - Database schema migrations in `pkg/db/migrations/`
-
-5. **pkg/config/**: Configuration management
-   - Global, Server, and Scheduler configs
-   - ECS metadata handling for AWS deployments
-   - Environment variable mapping
-
-### Database Schema
-
-Key tables:
-- `nodes_ecs`: Server node registry with metadata and heartbeat
-- `provides_ecs`: Publication timing results
-- `retrievals_ecs`: Retrieval timing results
-- `schedulers_ecs`: Scheduler metadata
-
-### Fleet System
-
-Fleets are logical groups of servers with different configurations:
-- `default`: Standard go-libp2p-kad-dht configuration
-- `fullrt`: Accelerated DHT client configuration
-- `optprov`: Optimistic provide configuration
-- `cid.contact`: IPNI integration
-
-### API Specification
-
-The server HTTP API is defined in `server.yaml` (OpenAPI 3.0):
-- `POST /provide`: Publish provider records for content
-- `POST /retrieve/{cid}`: Look up provider records
-- `GET /readiness`: Health check endpoint
-
-## Configuration
-
-### Environment Variables
-
-Global configuration (prefix `PARSEC_`):
-- Database: `PARSEC_DATABASE_HOST`, `PARSEC_DATABASE_PORT`, etc.
-- Telemetry: `PARSEC_TELEMETRY_HOST`, `PARSEC_TELEMETRY_PORT`
-- Debug: `PARSEC_DEBUG`, `PARSEC_LOG_LEVEL`
-
-Server configuration (prefix `PARSEC_SERVER_`):
-- `PARSEC_SERVER_SERVER_HOST/PORT`: HTTP API binding
-- `PARSEC_SERVER_PEER_PORT`: libp2p peer port
-- `PARSEC_SERVER_FLEET`: Fleet identifier
-- `PARSEC_SERVER_FULLRT`: Enable full routing table
-
-Scheduler configuration (prefix `PARSEC_SCHEDULER_`):
-- `PARSEC_SCHEDULER_FLEETS`: Comma-separated fleet names
-- `PARSEC_SCHEDULER_ROUTING`: DHT or IPNI routing
-
-### AWS ECS Integration
-
-Supports AWS ECS deployment with automatic metadata discovery:
-- `ECS_CONTAINER_METADATA_URI_V4`: Metadata endpoint
-- `AWS_REGION`: Deployment region
-- VPC peering for cross-region connectivity
-
-## Testing and Development
-
-### Local Development
-```bash
-# Start local database
-just database
-
-# Run database setup
-just db-reset
-
-# Start a server
-go run cmd/parsec/main.go server --fleet=local
-
-# Start a scheduler
-go run cmd/parsec/main.go scheduler --fleets=local
-```
-
-### Test Structure
-- Unit tests for utilities in `pkg/util/`
-- Integration tests require database setup
-- Use `just test` to run the full test suite
-
-## Code Organization
-
-### Key Packages
-- `pkg/util/`: Shared utilities (content generation, formatting)
-- `pkg/firehose/`: AWS Kinesis Firehose integration for telemetry
-- `pkg/metrics/`: Prometheus metrics collection
-- `js-libp2p/`: JavaScript libp2p implementation (separate component)
-
-### Dependencies
-- **libp2p**: P2P networking and DHT implementation
-- **SQLBoiler**: Database ORM with code generation
-- **CLI v2**: Command-line interface framework
-- **Prometheus**: Metrics collection and export
-- **PostgreSQL**: Primary data store
-
-### Database Model Generation
-
-Models are auto-generated using SQLBoiler:
-- Configuration in `sqlboiler.toml`
-- Excludes certain tables from generation (see blacklist)
-- Custom table aliases for ECS tables
-- Run `just models` to regenerate after schema changes
+@probe-lab/probelab-core
