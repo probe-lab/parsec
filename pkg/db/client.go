@@ -116,7 +116,7 @@ func (c *PGClient) applyMigrations() error {
 	}()
 	log.WithField("dir", tmpDir).Debugln("Created temporary directory")
 
-	err = fs.WalkDir(migrations, ".", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(migrations, ".", func(path string, d fs.DirEntry, _ error) error {
 		join := filepath.Join(tmpDir, path)
 		if d.IsDir() {
 			return os.MkdirAll(join, 0o755)
