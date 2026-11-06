@@ -16,12 +16,15 @@ report back the results to the scheduler. The scheduler then tracks this informa
 - [`parsec`](#parsec)
   - [Table of Contents](#table-of-contents)
   - [Concepts](#concepts)
-  - [Running](#running)
+  - [Quickstart](#quickstart)
+  - [Configuration](#configuration)
+  - [Metrics](#metrics)
+  - [Development](#development)
+  - [Deployment](#deployment)
   - [Implementing a Server](#implementing-a-server)
     - [Expose the HTTP API](#expose-the-http-api)
     - [Node Information](#node-information)
     - [Heartbeat](#heartbeat)
-    - [Optional: Prometheus Metrics](#optional-prometheus-metrics)
     - [`ECS_CONTAINER_METADATA_URI_V4` response:](#ecs_container_metadata_uri_v4-response)
   - [Maintainers](#maintainers)
   - [Contributing](#contributing)
@@ -37,15 +40,73 @@ Each of these three fleets are configured differently. The `default` fleet uses 
 Schedulers are then configured to interface with any combination of fleets. Right now, we have one scheduler for each fleet. As said above, it asks one node to publish content, then instructs the others to find the provider records, and then repeats the process with the next peer. However,
 we could configure a scheduler that does the same thing but with nodes from multiple fleets e.g., `default`+`fullrt` to check if content that's published with one implementation is reachable with another one.
 
-## Running
-
-You can run
+## Quickstart
 
 ```shell
 docker compose up
 ```
 
-to start two servers and one scheduler and see them interact.
+starts two servers, one scheduler and a PostgreSQL database and lets them interact. To run the binary on its own, start
+a database with `just database` and `just db-reset`, then:
+
+```shell
+just build
+./dist/parsec server dht --fleet=local
+./dist/parsec scheduler --fleets=local
+```
+
+## Configuration
+
+Every flag has an environment variable. [`.env.example`](./.env.example) lists all of them with their defaults.
+Run `parsec --help`, `parsec server --help` and `parsec scheduler --help` for the descriptions.
+
+| Command | Environment prefix | Examples |
+| --- | --- | --- |
+| all | `PARSEC_` | `PARSEC_DEBUG`, `PARSEC_LOG_LEVEL` (default `4`), `PARSEC_TELEMETRY_HOST` (default `localhost`), `PARSEC_TELEMETRY_PORT` (default `6666`), `PARSEC_DATABASE_*` |
+| `scheduler` | `PARSEC_SCHEDULER_` | `FLEETS`, `INTERVAL` (default `1m`), `PROBES` (default `1`) |
+| `server` | `PARSEC_SERVER_` | `SERVER_HOST`/`SERVER_PORT` (default `localhost:7070`), `PEER_PORT` (default `4001`), `FLEET`, `LEVELDB`, `FIREHOSE_*` |
+| `server dht` | `PARSEC_SERVER_DHT_` | `PROJECT` (default `ipfs`), `NETWORK` (default `amino`), `FULLRT`, `OPTPROV`, `SERVER_MODE`, `ALPHA` (default `10`) |
+| `server ipni` | `PARSEC_SERVER_IPNI_` | `INDEXER_HOST`, `INDEXER_INTERVAL`, `PUBLISHER_HOST`, `PUBLISHER_PORT` |
+
+On AWS ECS, `ECS_CONTAINER_METADATA_URI_V4` and `AWS_REGION` give the server its CPU, memory, IP address and region.
+
+## Metrics
+
+Parsec serves Prometheus metrics, and pprof, on `PARSEC_TELEMETRY_HOST:PARSEC_TELEMETRY_PORT` (default
+`localhost:6666`). It uses the Prometheus client directly, so names carry a `parsec_` prefix and do not yet follow
+the ProbeLab naming rules. A server implementation in another language needs no metrics.
+
+| Metric | Type | Unit | Labels | Exported by |
+| --- | --- | --- | --- | --- |
+| `parsec_durations` | summary (p50, p90, p99; max age 24h) | seconds | `type` (`retrieval_ttfpr`, `provide_duration`), `success`, `scheduler` | server |
+| `parsec_http_requests_total` | counter | requests | `method`, `path`, `scheduler` | server |
+| `parsec_active_nodes` | gauge | nodes | none | scheduler |
+| `parsec_issued_provides` | counter | operations | `success` | scheduler |
+| `parsec_issued_retrievals` | counter | operations | `success` | scheduler |
+| `parsec_datastore_disk_usage` | gauge | bytes | none | scheduler |
+
+The Grafana dashboard link is not yet documented here.
+
+## Development
+
+| Command | Does |
+| --- | --- |
+| `just` | Lists the recipes |
+| `just build` | Builds `dist/parsec` |
+| `just test` | Runs the tests |
+| `just lint` | Checks formatting, `go fix`, `go vet` and `staticcheck` |
+| `just format` | Formats the code with `gofumpt` and applies `go fix` |
+| `just ci` | Runs `lint`, `build` and `test`, as CI does |
+| `just tools`, `just database`, `just db-reset`, `just models` | Install the database tools, start PostgreSQL, rebuild the schema, regenerate `pkg/models` |
+
+Copy [`.env.example`](./.env.example) to `.env` for local settings. Run `just ci` before you open a pull request.
+
+## Deployment
+
+ProbeLab runs the scheduler and the servers as AWS ECS services in several regions, with one scheduler per fleet. The
+[`probelab-infra`](https://github.com/probe-lab/probelab-infra) repository holds the Terraform
+(`tf/parsec_*.tf`, `tf/modules/parsec_server`, `tf/modules/parsec_scheduler`). Every merge to `main` builds the
+image `probelab:parsec-sha<commit>` in ProbeLab's ECR.
 
 ## Implementing a Server
 
@@ -129,32 +190,6 @@ the `last_heartbeat` is not null. In AWS, we're using [VPC peering](https://docs
 
 The server must update the `node_ecs` row every minute to indicate it's still alive and happy to accept requests.
 
-### Optional: Prometheus Metrics
-
-To expose real time metrics about the publication and retrieval performance the Go server exposes a few prometheus metrics:
-
-```
-metric: parsec_durations
-type: summary
-buckets: 50th, 90th, 95th percentile
-maxAge: 24h
-labels:
-  type: retrieval_ttfpr | provide_duration
-  success: true | false
-  scheduler: default | optprov | fullrt
-```
-
-```
-metric: parsec_http_requests_total
-type: summary
-buckets: 50th, 90th, 95th percentile
-maxAge: 24h
-labels:
-  method: GET | POST | ...
-  path: /retrieve | /provide 
-  scheduler: default | optprov | fullrt
-```
-
 ### `ECS_CONTAINER_METADATA_URI_V4` response:
 
 The server can extract the available CPU and Memory from `Limits.CPU` and `Limits.Memory`. Further,
@@ -218,4 +253,4 @@ Feel free to dive in! [Open an issue](https://github.com/probe-lab/parsec/issues
 
 ## License
 
-[MIT](LICENSE) © Dennis Trautwein
+[PolyForm Strict License 1.0.0](LICENSE)
