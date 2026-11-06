@@ -273,7 +273,7 @@ var codecs = []multicodec.Code{
 }
 
 func (h *Host) subscribeForEvents() error {
-	sub, err := h.EventBus().Subscribe([]interface{}{new(event.EvtLocalAddressesUpdated), new(event.EvtLocalReachabilityChanged)})
+	sub, err := h.EventBus().Subscribe([]any{new(event.EvtLocalAddressesUpdated), new(event.EvtLocalReachabilityChanged)})
 	if err != nil {
 		return fmt.Errorf("event bus subscription: %w", err)
 	}
@@ -340,7 +340,7 @@ func RoutingTableSize(dht routing.Routing) int {
 func genProbes(start mh.Multihash, count int) ([]mh.Multihash, error) {
 	probes := make([]mh.Multihash, count)
 	hash := start
-	for i := 0; i < count; i++ {
+	for i := range count {
 		probe, err := mh.Sum(hash, mh.SHA2_256, -1)
 		if err != nil {
 			return nil, fmt.Errorf("gen probe digest: %w", err)
