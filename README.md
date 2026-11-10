@@ -106,7 +106,8 @@ Copy [`.env.example`](./.env.example) to `.env` for local settings. Run `just ci
 ProbeLab runs the scheduler and the servers as AWS ECS services in several regions, with one scheduler per fleet. The
 [`probelab-infra`](https://github.com/probe-lab/probelab-infra) repository holds the Terraform
 (`tf/parsec_*.tf`, `tf/modules/parsec_server`, `tf/modules/parsec_scheduler`). Every merge to `main` builds the
-image `probelab:parsec-sha<commit>` in ProbeLab's ECR.
+image `probelab:parsec-sha<commit>` in ProbeLab's ECR. A pull request with the label `push-image` pushes its
+image too. To deploy, set the image tag in `probelab-infra`.
 
 ## Implementing a Server
 
